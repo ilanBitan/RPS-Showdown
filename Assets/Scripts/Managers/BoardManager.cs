@@ -1,33 +1,31 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class BoardManager : MonoBehaviour
 {
-    public GameObject tilePrefab;  // The prefab of the Tile
-    public Transform boardContainer;  // The container where all the Tiles will be placed
-    public int rows = 6;  // The number of rows on the board
-    public int columns = 7;  // The number of columns on the board
+    public int rows = 6;
+    public int columns = 7;
+    public GameObject tilePrefab;
+    public RectTransform boardParent;
 
-    void Start()
-    {
-        GenerateBoard();  // Call the GenerateBoard method to create the board
-    }
+    [HideInInspector]
+    public RectTransform[,] tiles;
 
-    // Function to generate the board
-    void GenerateBoard()
+    void Awake()
     {
-        // Loop through each row
+        tiles = new RectTransform[rows, columns];
+
         for (int row = 0; row < rows; row++)
         {
-            // Loop through each column
             for (int col = 0; col < columns; col++)
             {
-                // Create a new Tile at the specified location
-                GameObject newTile = Instantiate(tilePrefab, boardContainer);
-                newTile.name = "Tile " + row + "-" + col; // Assign a name to each tile to avoid confusion
+                GameObject tile = Instantiate(tilePrefab, boardParent);
+                tile.name = $"Tile_{row}_{col}";
+                RectTransform rt = tile.GetComponent<RectTransform>();
+                tiles[row, col] = rt;
 
-                // Set the position of the Tile based on column and row
-                RectTransform rectTransform = newTile.GetComponent<RectTransform>();
-                rectTransform.localPosition = new Vector3(col * 105, -row * 105, 0); // Adjust this according to tile size
+                // שמור מיקום לפי גודל האריח
+                rt.anchoredPosition = new Vector2(col * 100, -row * 100);
+                rt.sizeDelta = new Vector2(100, 100);
             }
         }
     }

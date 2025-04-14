@@ -1,12 +1,10 @@
 fileFormatVersion: 2
-guid: f257ce75ac60ee947adbb2c387b306e7
+guid: de61b0dd1461d244093241b079146ce6
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences:
-  - tilePrefab: {instanceID: 0}
-  - boardContainer: {instanceID: 0}
-  executionOrder: 100
+  defaultReferences: []
+  executionOrder: 0
   icon: {instanceID: 0}
   userData: 
   assetBundleName: 
