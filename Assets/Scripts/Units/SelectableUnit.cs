@@ -5,12 +5,17 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler
 {
     public void OnPointerClick(PointerEventData eventData)
     {
-        PlayerController controller = FindObjectOfType<PlayerController>();
         RPSUnit unit = GetComponent<RPSUnit>();
+        if (unit == null) return;
 
-        if (controller != null && unit != null)
+        foreach (var controller in FindObjectsOfType<PlayerController>())
         {
-            controller.SelectUnit(unit);
+            if (controller.myPlayerId == unit.playerId &&
+                TurnManager.Instance.IsPlayerTurn(unit.playerId))
+            {
+                controller.SelectUnit(unit);
+                break;
+            }
         }
     }
 }

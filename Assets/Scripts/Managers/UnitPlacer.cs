@@ -1,12 +1,13 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections;
 
 public class UnitPlacer : MonoBehaviour
 {
     public GameObject playerUnitPrefab;
     public GameObject enemyUnitPrefab;
-    public Transform boardTransform; // גרור לכאן את Board
+    public Transform boardTransform;
 
     public int rows = 6;
     public int columns = 7;
@@ -23,14 +24,14 @@ public class UnitPlacer : MonoBehaviour
             for (int col = 0; col < columns; col++)
             {
                 if (row == 0 || row == 1)
-                    CreateUnit(enemyUnitPrefab, row, col);
+                    CreateUnit(enemyUnitPrefab, row, col, 2);
                 else if (row == rows - 2 || row == rows - 1)
-                    CreateUnit(playerUnitPrefab, row, col);
+                    CreateUnit(playerUnitPrefab, row, col, 1);
             }
         }
     }
 
-    void CreateUnit(GameObject prefab, int row, int col)
+    void CreateUnit(GameObject prefab, int row, int col, int playerId)
     {
         int index = row * columns + col;
         if (index >= boardTransform.childCount)
@@ -63,7 +64,16 @@ public class UnitPlacer : MonoBehaviour
         if (rps != null)
         {
             rps.Position = new Vector2Int(col, row);
-            rps.IsPlayerControlled = (row == rows - 2 || row == rows - 1);
+            rps.IsPlayerControlled = (playerId == 1);
+            rps.playerId = playerId;
+
+            // 💥 קביעה רנדומלית של סוג היחידה
+            rps.Kind = (RPSUnit.RPSKind)Random.Range(0, 3);
+
+            // ✨ עדכון האות על המסך
+            TextMeshProUGUI text = unit.GetComponentInChildren<TextMeshProUGUI>();
+            if (text != null)
+                text.text = rps.GetLetter();
         }
     }
 
