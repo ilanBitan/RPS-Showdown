@@ -16,6 +16,7 @@ public class PlayerController : MonoBehaviour
         if (!TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive()) return;
         if (selectedUnit == null) return;
+        if (!selectedUnit.IsMovable()) return;
 
         Vector2Int direction = Vector2Int.zero;
 
@@ -33,6 +34,7 @@ public class PlayerController : MonoBehaviour
     public void SelectUnit(RPSUnit unit)
     {
         if (unit.playerId != myPlayerId) return;
+        if (!unit.IsMovable()) return;
         if (TurnManager.Instance == null || !TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive()) return;
 
@@ -76,6 +78,30 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
+                // 💣 TRAP
+                if (other.role == RPSUnit.UnitRole.Trap)
+                {
+                    Debug.Log("💥 Trap triggered! Attacker destroyed.");
+                    Destroy(unit.gameObject);
+                    ClearSelection();
+                    TurnManager.Instance?.EndTurn();
+                    return;
+                }
+
+                // 🏁 FLAG
+                if (other.role == RPSUnit.UnitRole.Flag)
+                {
+                    Debug.Log("🎉 You captured the enemy FLAG! YOU WIN!");
+                    Destroy(other.gameObject);
+                    MoveUnitTo(unit, target);
+                    ClearSelection();
+
+                    // כאן אפשר להוסיף לוגיקת ניצחון עתידית
+                    Debug.Log($"🏆 Player {myPlayerId} wins the game!");
+                    return;
+                }
+
+                // 🔁 RPS Battle
                 if (unit.Kind == other.Kind)
                 {
                     Debug.Log("⚔️ Equal kinds – entering RPS battle mode!");
@@ -83,6 +109,7 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
+                // ✅ רגיל – קרב מבוסס חוקים
                 if (unit.Beats(other))
                 {
                     Debug.Log("✅ Attacker wins – replacing enemy");

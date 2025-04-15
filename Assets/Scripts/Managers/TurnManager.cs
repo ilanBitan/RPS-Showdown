@@ -15,11 +15,6 @@ public class TurnManager : MonoBehaviour
             Instance = this;
     }
 
-    private void Start()
-    {
-        Debug.Log($"🚀 Game started. First turn: {currentTurn}");
-    }
-
     public bool IsPlayerTurn(int playerId)
     {
         return (playerId == 1 && currentTurn == PlayerTurn.Player1)
@@ -30,5 +25,6 @@ public class TurnManager : MonoBehaviour
     {
         currentTurn = (currentTurn == PlayerTurn.Player1) ? PlayerTurn.Player2 : PlayerTurn.Player1;
         Debug.Log($"🔄 Turn switched to: {currentTurn}");
+        TurnTimerManager.Instance?.StartTurn();
     }
 }

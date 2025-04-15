@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 using System.Collections;
 
 public class UnitPlacer : MonoBehaviour
@@ -12,9 +13,13 @@ public class UnitPlacer : MonoBehaviour
     public int rows = 6;
     public int columns = 7;
 
+    private List<RPSUnit> player1Units = new List<RPSUnit>();
+    private List<RPSUnit> player2Units = new List<RPSUnit>();
+
     void Start()
     {
         PlaceUnits();
+        GameSetupManager.Instance.StartSetup(player1Units, player2Units);
     }
 
     void PlaceUnits()
@@ -34,20 +39,14 @@ public class UnitPlacer : MonoBehaviour
     void CreateUnit(GameObject prefab, int row, int col, int playerId)
     {
         int index = row * columns + col;
-        if (index >= boardTransform.childCount)
-        {
-            Debug.LogWarning($"❗ Index {index} out of bounds for row {row}, col {col}");
-            return;
-        }
+        if (index >= boardTransform.childCount) return;
 
         Transform tile = boardTransform.GetChild(index);
         GameObject unit = Instantiate(prefab, tile);
         unit.name = $"Unit_{row}_{col}";
 
         RectTransform unitRect = unit.GetComponent<RectTransform>();
-        unitRect.anchorMin = new Vector2(0.5f, 0.5f);
-        unitRect.anchorMax = new Vector2(0.5f, 0.5f);
-        unitRect.pivot = new Vector2(0.5f, 0.5f);
+        unitRect.anchorMin = unitRect.anchorMax = unitRect.pivot = new Vector2(0.5f, 0.5f);
         unitRect.anchoredPosition = Vector2.zero;
         unitRect.sizeDelta = new Vector2(100, 100);
 
@@ -67,13 +66,12 @@ public class UnitPlacer : MonoBehaviour
             rps.IsPlayerControlled = (playerId == 1);
             rps.playerId = playerId;
 
-            // 💥 קביעה רנדומלית של סוג היחידה
-            rps.Kind = (RPSUnit.RPSKind)Random.Range(0, 3);
+            rps.role = RPSUnit.UnitRole.None;
+            rps.Kind = RPSUnit.RPSKind.Rock; // יוחלף בעתיד בהגרלה
+            rps.ResetVisual(); // << החשוב כאן!
 
-            // ✨ עדכון האות על המסך
-            TextMeshProUGUI text = unit.GetComponentInChildren<TextMeshProUGUI>();
-            if (text != null)
-                text.text = rps.GetLetter();
+            if (playerId == 1) player1Units.Add(rps);
+            else player2Units.Add(rps);
         }
     }
 
@@ -81,8 +79,7 @@ public class UnitPlacer : MonoBehaviour
     {
         float time = 0f;
         Color start = img.color;
-        Color target = start;
-        target.a = 1f;
+        Color target = start; target.a = 1f;
 
         while (time < duration)
         {

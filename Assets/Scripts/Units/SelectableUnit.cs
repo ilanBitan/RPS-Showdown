@@ -3,8 +3,17 @@ using UnityEngine.EventSystems;
 
 public class SelectableUnit : MonoBehaviour, IPointerClickHandler
 {
+    public System.Action onSetupClick;
+
     public void OnPointerClick(PointerEventData eventData)
     {
+        // אם יש setupClick – זה override ללחיצה רגילה
+        if (onSetupClick != null)
+        {
+            onSetupClick.Invoke();
+            return;
+        }
+
         RPSUnit unit = GetComponent<RPSUnit>();
         if (unit == null) return;
 

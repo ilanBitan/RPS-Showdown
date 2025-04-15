@@ -4,7 +4,10 @@ using TMPro;
 public class RPSUnit : Unit
 {
     public enum RPSKind { Rock, Paper, Scissors }
+    public enum UnitRole { None, Flag, Trap }
+
     public RPSKind Kind;
+    public UnitRole role = UnitRole.None;
 
     public override string UnitType => Kind.ToString();
 
@@ -19,12 +22,17 @@ public class RPSUnit : Unit
 
     public string GetLetter()
     {
-        return Kind switch
+        return role switch
         {
-            RPSKind.Rock => "R",
-            RPSKind.Paper => "P",
-            RPSKind.Scissors => "S",
-            _ => "?"
+            UnitRole.Flag => "F",
+            UnitRole.Trap => "T",
+            _ => Kind switch
+            {
+                RPSKind.Rock => "R",
+                RPSKind.Paper => "P",
+                RPSKind.Scissors => "S",
+                _ => ""
+            }
         };
     }
 
@@ -35,5 +43,37 @@ public class RPSUnit : Unit
         {
             text.text = GetLetter();
         }
+    }
+
+    public void ResetVisual()
+    {
+        var text = GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+            text.text = "";
+        }
+    }
+
+    public void EnableSetupSelection()
+    {
+        var clickable = GetComponent<SelectableUnit>();
+        if (clickable != null)
+        {
+            clickable.onSetupClick = () => GameSetupManager.Instance.OnUnitClicked(this);
+        }
+    }
+
+    public void DisableSetupSelection()
+    {
+        var clickable = GetComponent<SelectableUnit>();
+        if (clickable != null)
+        {
+            clickable.onSetupClick = null;
+        }
+    }
+
+    public bool IsMovable()
+    {
+        return role != UnitRole.Flag && role != UnitRole.Trap;
     }
 }
