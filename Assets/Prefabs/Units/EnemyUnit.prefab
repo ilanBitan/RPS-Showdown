@@ -133,7 +133,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 23.513893, y: -35.446297}
+  m_AnchoredPosition: {x: 22.51477, y: -47.63285}
   m_SizeDelta: {x: 22.657, y: 25.8099}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1743736318171378345
@@ -208,7 +208,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -15.785306, y: -35.771194}
+  m_AnchoredPosition: {x: -16.784424, y: -47.95775}
   m_SizeDelta: {x: 27.5663, y: 26.4604}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2624890666140038433
@@ -619,7 +619,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.50090635, y: -0.5628953}
+  m_AnchoredPosition: {x: -1.5, y: -2.4}
   m_SizeDelta: {x: 90.8062, y: 71.9315}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7298545979761318343
@@ -724,8 +724,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2.6, y: -3.7}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -2.6, y: 10.6144}
+  m_SizeDelta: {x: 100, y: 128.6287}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5378658718083972784
 CanvasRenderer:
@@ -742,7 +742,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8580350768864457875}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -755,8 +755,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 10917, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4

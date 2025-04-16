@@ -48,7 +48,7 @@ public class UnitPlacer : MonoBehaviour
         RectTransform unitRect = unit.GetComponent<RectTransform>();
         unitRect.anchorMin = unitRect.anchorMax = unitRect.pivot = new Vector2(0.5f, 0.5f);
         unitRect.anchoredPosition = Vector2.zero;
-        unitRect.sizeDelta = new Vector2(100, 100);
+       // unitRect.sizeDelta = new Vector2(100, 100);
 
         Image img = unit.GetComponent<Image>();
         if (img != null)
