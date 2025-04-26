@@ -36,7 +36,7 @@ AnimatorController:
   m_Name: EnemyUnit 1
   serializedVersion: 5
   m_AnimatorParameters:
-  - m_Name: jump_enemy
+  - m_Name: jump
     m_Type: 9
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -111,7 +111,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 1
-    m_ConditionEvent: jump_enemy
+    m_ConditionEvent: jump
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 8368386363547187584}
@@ -119,7 +119,7 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.07622507
+  m_TransitionDuration: 0.14204481
   m_TransitionOffset: 0
   m_ExitTime: 0.45512694
   m_HasExitTime: 0
