@@ -2,10 +2,9 @@
 
 public class TurnManager : MonoBehaviour
 {
-    public static TurnManager Instance { get; private set; }
+    public static TurnManager Instance;
 
-    public enum PlayerTurn { Player1, Player2 }
-    public PlayerTurn currentTurn = PlayerTurn.Player1;
+    private bool isPlayer1Turn = true;
 
     private void Awake()
     {
@@ -15,16 +14,49 @@ public class TurnManager : MonoBehaviour
             Instance = this;
     }
 
-    public bool IsPlayerTurn(int playerId)
+    public void StartPlayerTurn()
     {
-        return (playerId == 1 && currentTurn == PlayerTurn.Player1)
-            || (playerId == 2 && currentTurn == PlayerTurn.Player2);
+        TurnTimerManager.Instance?.StartTurn();
+    }
+
+    public void StartAITurn()
+    {
+        TurnTimerManager.Instance?.StartTurn();
+        AIPlayerController.Instance?.PlayTurn();
     }
 
     public void EndTurn()
     {
-        currentTurn = (currentTurn == PlayerTurn.Player1) ? PlayerTurn.Player2 : PlayerTurn.Player1;
-        Debug.Log($"🔄 Turn switched to: {currentTurn}");
-        TurnTimerManager.Instance?.StartTurn();
+        TurnTimerManager.Instance?.StopTimer();
+        isPlayer1Turn = !isPlayer1Turn;
+
+        if (isPlayer1Turn)
+            StartPlayerTurn();
+        else
+            StartAITurn();
+    }
+
+    public bool IsPlayerTurn(int playerId)
+    {
+        return (playerId == 1 && isPlayer1Turn) || (playerId == 2 && !isPlayer1Turn);
+    }
+
+    public void StartDuel(RPSUnit unit1, RPSUnit unit2)
+    {
+        int winner = Random.Range(0, 2);
+
+        if (winner == 0)
+        {
+            BoardManager.Instance.RemoveUnit(unit2);
+            Destroy(unit2.gameObject);
+            unit1.MoveTo(unit2.Position);
+        }
+        else
+        {
+            BoardManager.Instance.RemoveUnit(unit1);
+            Destroy(unit1.gameObject);
+        }
+
+        EndTurn();
     }
 }

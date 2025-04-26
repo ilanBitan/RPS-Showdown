@@ -1,165 +1,142 @@
-﻿using UnityEngine;
+﻿
+using System.Collections;
+using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
+using static RPSUnit;
 
 public class BattleManager : MonoBehaviour
 {
     public static BattleManager Instance;
 
-    [Header("Attacker Panel")]
-    public GameObject battlePanel_Attacker;
-    public TextMeshProUGUI titleText_Attacker;
-    public Button rockButton_A;
-    public Button paperButton_A;
-    public Button scissorsButton_A;
+    public GameObject battlePanel;
+    public Button rockButton, paperButton, scissorsButton;
 
-    [Header("Defender Panel")]
-    public GameObject battlePanel_Defender;
-    public TextMeshProUGUI titleText_Defender;
-    public Button rockButton_D;
-    public Button paperButton_D;
-    public Button scissorsButton_D;
-
-    private RPSUnit attacker;
-    private RPSUnit defender;
+    private RPSUnit playerUnit;
+    private RPSUnit aiUnit;
     private Vector2Int targetPos;
-
     private bool isBattleActive = false;
 
-    private enum BattleTurn { Attacker, Defender }
-    private BattleTurn currentTurn;
+    private RPSUnit.RPSKind playerChoice;
+    private RPSUnit.RPSKind aiChoice;
 
-    private RPSUnit.RPSKind attackerChoice;
-    private RPSUnit.RPSKind defenderChoice;
+    private bool isPlayerInitiator;
 
     private void Awake()
     {
         if (Instance != null && Instance != this)
-        {
             Destroy(gameObject);
+        else
+            Instance = this;
+
+        battlePanel?.SetActive(false);
+    }
+
+    public void StartBattle(RPSUnit initiator, RPSUnit opponent, Vector2Int target)
+    {
+     //   if (GameEndHandler.gameEnded)
+      //      return;
+
+        isPlayerInitiator = initiator.IsPlayerControlled;
+
+        if (isPlayerInitiator)
+        {
+            playerUnit = initiator;
+            aiUnit = opponent;
+        }
+        else
+        {
+            aiUnit = initiator;
+            playerUnit = opponent;
+        }
+
+        targetPos = target;
+        isBattleActive = true;
+
+        ShowPlayerPanel();
+    }
+
+    private void ShowPlayerPanel()
+    {
+        battlePanel?.SetActive(true);
+
+        rockButton.onClick.RemoveAllListeners();
+        rockButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
+
+        paperButton.onClick.RemoveAllListeners();
+        paperButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Paper));
+
+        scissorsButton.onClick.RemoveAllListeners();
+        scissorsButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Scissors));
+    }
+
+    private void OnPlayerChoice(RPSUnit.RPSKind choice)
+    {
+        playerChoice = choice;
+        aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
+
+        Debug.Log($"⚔️ Battle initiated! Player chose {playerChoice}, AI chose {aiChoice}");
+        ResolveBattle();
+    }
+
+    private void ResolveBattle()
+    {
+        battlePanel?.SetActive(false);
+
+        bool playerWins = Beats(playerChoice, aiChoice);
+        bool aiWins = Beats(aiChoice, playerChoice);
+
+        // חשיפת שתי היחידות תמיד
+        playerUnit.Kind = playerChoice;
+        aiUnit.Kind = aiChoice;
+
+        playerUnit.Reveal();
+        aiUnit.Reveal();
+
+        playerUnit.UpdateVisual();
+        aiUnit.UpdateVisual();
+
+        // בדיקת ניצחון אם FLAG נחשף
+        if (playerUnit.role == RPSUnit.UnitRole.Flag)
+        {
+            //FindObjectOfType<GameEndHandler>().ShowVictory("Player 2");
+            return;
+        }
+        if (aiUnit.role == RPSUnit.UnitRole.Flag)
+        {
+         //   FindObjectOfType<GameEndHandler>().ShowVictory("Player 1");
             return;
         }
 
-        Instance = this;
-        battlePanel_Attacker?.SetActive(false);
-        battlePanel_Defender?.SetActive(false);
-    }
-
-    public bool IsBattleActive()
-    {
-        return isBattleActive;
-    }
-
-    public void StartBattle(RPSUnit attackingUnit, RPSUnit defendingUnit, Vector2Int target)
-    {
-        attacker = attackingUnit;
-        defender = defendingUnit;
-        targetPos = target;
-        isBattleActive = true;
-        currentTurn = BattleTurn.Attacker;
-
-        ShowPanelForCurrentTurn();
-    }
-
-    void ShowPanelForCurrentTurn()
-    {
-        battlePanel_Attacker?.SetActive(false);
-        battlePanel_Defender?.SetActive(false);
-
-        if (currentTurn == BattleTurn.Attacker)
+        if (playerWins)
         {
-            battlePanel_Attacker?.SetActive(true);
-            titleText_Attacker.text = "Attacker: Choose Rock / Paper / Scissors";
+            Debug.Log("✅ Player wins the battle!");
 
-            rockButton_A.onClick.RemoveAllListeners();
-            paperButton_A.onClick.RemoveAllListeners();
-            scissorsButton_A.onClick.RemoveAllListeners();
-
-            rockButton_A.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
-            paperButton_A.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Paper));
-            scissorsButton_A.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Scissors));
+            Destroy(aiUnit.gameObject);
+            MoveUnitTo(playerUnit, targetPos);
         }
-        else
+        else if (aiWins)
         {
-            battlePanel_Defender?.SetActive(true);
-            titleText_Defender.text = "Defender: Choose Rock / Paper / Scissors";
+            Debug.Log("❌ AI wins the battle!");
 
-            rockButton_D.onClick.RemoveAllListeners();
-            paperButton_D.onClick.RemoveAllListeners();
-            scissorsButton_D.onClick.RemoveAllListeners();
-
-            rockButton_D.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
-            paperButton_D.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Paper));
-            scissorsButton_D.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Scissors));
-        }
-    }
-
-    void OnPlayerChoice(RPSUnit.RPSKind choice)
-    {
-        battlePanel_Attacker?.SetActive(false);
-        battlePanel_Defender?.SetActive(false);
-
-        if (currentTurn == BattleTurn.Attacker)
-        {
-            attackerChoice = choice;
-            currentTurn = BattleTurn.Defender;
-            Invoke(nameof(ShowPanelForCurrentTurn), 0.5f);
-        }
-        else
-        {
-            defenderChoice = choice;
-            ResolveBattle();
-        }
-    }
-
-    void ResolveBattle()
-    {
-        Debug.Log($"⚔️ Battle: Attacker chose {attackerChoice}, Defender chose {defenderChoice}");
-
-        if (Beats(attackerChoice, defenderChoice))
-        {
-            Debug.Log("✅ Attacker wins the battle!");
-            attacker.Kind = attackerChoice;
-            attacker.UpdateVisual();
-
-            // 🧼 מנקה בחירה מכל השחקנים
-            foreach (var controller in FindObjectsOfType<PlayerController>())
-            {
-                controller.ClearSelection();
-            }
-
-            Destroy(defender.gameObject);
-            MoveUnitTo(attacker, targetPos);
-            EndBattle();
-        }
-        else if (Beats(defenderChoice, attackerChoice))
-        {
-            Debug.Log("❌ Attacker lost the battle!");
-            defender.Kind = defenderChoice;
-            defender.UpdateVisual();
-
-            Destroy(attacker.gameObject);
-            EndBattle();
+            Destroy(playerUnit.gameObject);
         }
         else
         {
             Debug.Log("🤝 Tie – rematch round!");
-            currentTurn = BattleTurn.Attacker;
-            Invoke(nameof(ShowPanelForCurrentTurn), 0.5f);
+            Invoke(nameof(ShowPlayerPanel), 0.5f);
+            return;
         }
+
+        foreach (var controller in FindObjectsOfType<PlayerController>())
+            controller.ClearSelection();
+
+        EndBattle();
     }
 
-    void EndBattle()
-    {
-        isBattleActive = false;
-        attacker = null;
-        defender = null;
-        TurnManager.Instance?.EndTurn();
-    }
 
-    void MoveUnitTo(RPSUnit unit, Vector2Int target)
+    private void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {
-        Transform targetTile = GetTileTransform(target);
+        Transform targetTile = BoardManager.Instance.GetTileTransform(target);
         if (targetTile != null)
         {
             unit.transform.SetParent(targetTile, false);
@@ -170,18 +147,25 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    Transform GetTileTransform(Vector2Int pos)
-    {
-        int index = pos.y * 7 + pos.x;
-        Transform board = GameObject.Find("Board")?.transform;
-        if (board == null || index >= board.childCount) return null;
-        return board.GetChild(index);
-    }
-
-    bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
+    private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
     {
         return (a == RPSUnit.RPSKind.Rock && b == RPSUnit.RPSKind.Scissors) ||
                (a == RPSUnit.RPSKind.Paper && b == RPSUnit.RPSKind.Rock) ||
                (a == RPSUnit.RPSKind.Scissors && b == RPSUnit.RPSKind.Paper);
+    }
+
+    private void EndBattle()
+    {
+        isBattleActive = false;
+        playerUnit = null;
+        aiUnit = null;
+        battlePanel?.SetActive(false);
+
+        TurnManager.Instance?.EndTurn();
+    }
+
+    public bool IsBattleActive()
+    {
+        return isBattleActive;
     }
 }

@@ -41,7 +41,24 @@ public class TurnTimerManager : MonoBehaviour
 
     private void Update()
     {
-        if (!timerRunning || !activePhaseStarted) return;
+        if (!timerRunning || !activePhaseStarted)
+            return;
+
+        if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive())
+            return;
+
+        if (PlayerController.gameEnded)
+        {
+            // אם המשחק נגמר - להציג הודעה במקום טיימר
+            if (timerText != null)
+            {
+                if (TurnManager.Instance.IsPlayerTurn(1))
+                    timerText.text = "YOU WIN";
+                else
+                    timerText.text = "YOU LOST";
+            }
+            return;
+        }
 
         currentTime -= Time.deltaTime;
         UpdateDisplay();
@@ -53,6 +70,8 @@ public class TurnTimerManager : MonoBehaviour
             TurnManager.Instance?.EndTurn();
         }
     }
+
+
 
     void UpdateDisplay()
     {

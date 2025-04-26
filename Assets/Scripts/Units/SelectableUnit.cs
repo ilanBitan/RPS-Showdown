@@ -7,6 +7,9 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+       // if (GameEndHandler.gameEnded)
+         //   return;
+
         // אם יש setupClick – זה override ללחיצה רגילה
         if (onSetupClick != null)
         {
