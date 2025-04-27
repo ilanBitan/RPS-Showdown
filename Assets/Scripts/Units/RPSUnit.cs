@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
+using System.Collections;
+
 
 public class RPSUnit : Unit
 {
@@ -174,14 +176,62 @@ public class RPSUnit : Unit
         return true;
     }
 
-    public void MoveTo(Vector2Int newPos)
+public void MoveTo(Vector2Int newPos)
+{
+    // Handle board management logic
+    BoardManager.Instance.MoveUnit(this, newPos);
+    SetPosition(newPos);
+    
+    // Get the target tile transform
+    Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
+    if (targetTile != null)
     {
-        BoardManager.Instance.MoveUnit(this, newPos);
-        SetPosition(newPos);
-        transform.SetParent(BoardManager.Instance.GetTileTransform(newPos));
-        transform.localPosition = Vector3.zero;
-        Debug.Log($"✅ Unit moved to → Column: {newPos.x}, Row: {newPos.y}");
+        // Start the animation coroutine
+        StartCoroutine(SmoothMove(targetTile, newPos));
     }
+    
+    Debug.Log($"✅ Unit move initiated to → Column: {newPos.x}, Row: {newPos.y}");
+}
+
+private IEnumerator SmoothMove(Transform targetTile, Vector2Int targetGridPos)
+{
+    // Trigger jump animation
+    Animator anim = GetComponent<Animator>();
+    if (anim != null)
+    {
+        anim.SetInteger("playerId", playerId);
+        anim.ResetTrigger("jump");
+        anim.SetTrigger("jump");
+    }
+
+    // Wait for animation to start
+    yield return new WaitForSeconds(0.2f);
+    
+    RectTransform rt = GetComponent<RectTransform>();
+    if (rt == null) yield break;
+
+    Vector3 start = rt.position;
+    Vector3 end = targetTile.position;
+
+    float elapsed = 0f;
+    float duration = 0.25f; // smooth time
+
+    while (elapsed < duration)
+    {
+        rt.position = Vector3.Lerp(start, end, elapsed / duration);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    // Snap to final position
+    rt.position = end;
+
+    // Update hierarchy and grid data
+    transform.SetParent(targetTile, false);
+    rt.anchoredPosition = Vector2.zero;
+    
+    Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+}
 
     public bool IsEnemy(RPSUnit other)
     {

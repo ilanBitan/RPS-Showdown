@@ -112,7 +112,7 @@ public class BattleManager : MonoBehaviour
             Debug.Log("✅ Player wins the battle!");
 
             Destroy(aiUnit.gameObject);
-            MoveUnitTo(playerUnit, targetPos);
+            playerUnit.MoveTo(targetPos);
         }
         else if (aiWins)
         {
@@ -136,15 +136,7 @@ public class BattleManager : MonoBehaviour
 
     private void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {
-        Transform targetTile = BoardManager.Instance.GetTileTransform(target);
-        if (targetTile != null)
-        {
-            unit.transform.SetParent(targetTile, false);
-            RectTransform rt = unit.GetComponent<RectTransform>();
-            rt.anchoredPosition = Vector2.zero;
-            unit.Position = target;
-            Debug.Log($"✅ Unit moved to [col {target.x}, row {target.y}]");
-        }
+        unit.MoveTo(target);
     }
 
     private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
