@@ -222,6 +222,8 @@ System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Ve
     unit.transform.SetParent(targetTile, false);
     rt.anchoredPosition = Vector2.zero;
     unit.Position = targetGridPos;
+    BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
+
 
     Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
 }

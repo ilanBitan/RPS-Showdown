@@ -2,7 +2,6 @@
 using TMPro;
 using System.Collections;
 
-
 public class RPSUnit : Unit
 {
     public enum RPSKind { Rock, Paper, Scissors }
@@ -15,6 +14,13 @@ public class RPSUnit : Unit
     public bool IsRevealed => isRevealed;
 
     public override string UnitType => Kind.ToString();
+
+    private UnitVisualController visualController;
+
+    private void Awake()
+    {
+        visualController = GetComponent<UnitVisualController>();
+    }
 
     public override bool Beats(Unit other)
     {
@@ -40,18 +46,22 @@ public class RPSUnit : Unit
             }
         };
     }
+
     public void UpdateVisual()
     {
         var text = GetComponentInChildren<TextMeshProUGUI>();
-        Debug.Log($"🟡 UpdateVisual called for {name}. Found text: {text != null}");
 
         if (text != null)
         {
             text.text = isRevealed ? GetLetter() : "";
             text.color = Color.white;
         }
-    }
 
+        if (visualController != null)
+        {
+            visualController.UpdateWeaponVisual(isRevealed ? GetLetter() : "");
+        }
+    }
 
     public void Reveal()
     {
@@ -65,6 +75,11 @@ public class RPSUnit : Unit
         var text = GetComponentInChildren<TextMeshProUGUI>();
         if (text != null)
             text.text = "";
+
+        if (visualController != null)
+        {
+            visualController.UpdateWeaponVisual("");
+        }
     }
 
     public void EnableSetupSelection()

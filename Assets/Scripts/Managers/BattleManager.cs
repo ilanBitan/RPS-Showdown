@@ -119,6 +119,7 @@ public class BattleManager : MonoBehaviour
             Debug.Log("❌ AI wins the battle!");
 
             Destroy(playerUnit.gameObject);
+            aiUnit.MoveTo(targetPos);
         }
         else
         {
