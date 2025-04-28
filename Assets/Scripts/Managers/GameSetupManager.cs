@@ -114,18 +114,23 @@ public class GameSetupManager : MonoBehaviour
     {
         Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
 
+        // 🪨📄✂️ מגדיר תפקידי RPS ליחידות שאין להן תפקיד
         AssignRandomRPS(player1Units);
         AssignRandomRPS(player2Units);
 
+        // ❌ מבטל אפשרות בחירה ליחידות אחרי שהוגדרו
         foreach (var unit in player1Units) unit.DisableSetupSelection();
         foreach (var unit in player2Units) unit.DisableSetupSelection();
 
+        // ✅ מסמן שה-Setup הסתיים
         setupComplete = true;
         Debug.Log("✅ Setup complete. Game begins!");
 
+        // ⏳ מפעיל טיימר כללי למשחק
         TurnTimerManager.Instance?.ActivateGameTimer();
         TurnTimerManager.Instance?.StartTurn();
 
+        // 🧠 במצב נגד AI, מוודא שיש AIPlayerController
         var mode = GameModeManager.Instance.SelectedMode;
         if (mode == GameMode.PvE_Easy || mode == GameMode.PvE_Medium || mode == GameMode.PvE_Hard)
         {
@@ -136,7 +141,22 @@ public class GameSetupManager : MonoBehaviour
                 Debug.Log("🧠 AIPlayerController instantiated at runtime.");
             }
         }
+
+        // 🎯 רנדומיזציה: מי יתחיל את המשחק, שחקן או AI?
+        bool playerStarts = Random.Range(0, 2) == 0;
+
+        if (playerStarts)
+        {
+            Debug.Log("🎯 Player 1 starts the game!");
+            TurnManager.Instance?.StartPlayerTurn();
+        }
+        else
+        {
+            Debug.Log("🤖 AI starts the game!");
+            TurnManager.Instance?.StartAITurn();
+        }
     }
+
 
     private void AssignRandomRPS(List<RPSUnit> units)
     {
