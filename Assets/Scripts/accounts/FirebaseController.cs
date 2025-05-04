@@ -9,6 +9,7 @@ using Firebase.Auth;
 using System;
 using System.Threading.Tasks;
 using Firebase.Extensions;
+using Firebase.Database;
 
 public class FirebaseController : MonoBehaviour
 {
@@ -21,6 +22,8 @@ public class FirebaseController : MonoBehaviour
 
     bool isSignIn = false;
     private bool isFirebaseInitialized = false;
+    private bool isInitializing = false;
+    private DatabaseReference databaseReference;
 
     public void OpenLoginPanel()
     {
@@ -56,10 +59,18 @@ public class FirebaseController : MonoBehaviour
 
     public void LoginUser()
     {
+        // Check if Firebase is still initializing
+        if (isInitializing)
+        {
+            showNotificationMessage("Please wait", "Firebase is still initializing...");
+            return;
+        }
+
         // Check if Firebase is initialized before attempting login
         if (!isFirebaseInitialized)
         {
-            showNotificationMessage("Error", "Firebase is still initializing. Please wait.");
+            showNotificationMessage("Error", "Firebase is not initialized. Trying to reconnect...");
+            InitializeFirebaseWithRetry();
             return;
         }
 
@@ -80,10 +91,18 @@ public class FirebaseController : MonoBehaviour
 
     public void SignUpUser()
     {
+        // Check if Firebase is still initializing
+        if (isInitializing)
+        {
+            showNotificationMessage("Please wait", "Firebase is still initializing...");
+            return;
+        }
+
         // Check if Firebase is initialized before attempting signup
         if (!isFirebaseInitialized)
         {
-            showNotificationMessage("Error", "Firebase is still initializing. Please wait.");
+            showNotificationMessage("Error", "Firebase is not initialized. Trying to reconnect...");
+            InitializeFirebaseWithRetry();
             return;
         }
 
@@ -263,13 +282,100 @@ public class FirebaseController : MonoBehaviour
         }
     }
 
+    // Improved initialization with error handling
     void InitializeFirebase()
     {
-        auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
-        auth.StateChanged += AuthStateChanged;
-        AuthStateChanged(this, null);
-        isFirebaseInitialized = true;
-        UnityEngine.Debug.Log("Firebase Auth initialized successfully");
+        isInitializing = true;
+        try
+        {
+            auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
+            if (auth != null)
+            {
+                auth.StateChanged += AuthStateChanged;
+                AuthStateChanged(this, null);
+
+                // הוסף את השורה הזו לאתחול ה-Database
+                databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
+
+                isFirebaseInitialized = true;
+                isInitializing = false;
+                UnityEngine.Debug.Log("Firebase Auth initialized successfully");
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("Firebase Auth instance is null");
+                isInitializing = false;
+                showNotificationMessage("Error", "Firebase authentication could not be initialized");
+            }
+        }
+        catch (Exception ex)
+        {
+            UnityEngine.Debug.LogError($"Error initializing Firebase Auth: {ex.Message}");
+            isInitializing = false;
+            showNotificationMessage("Error", $"Firebase initialization error: {ex.Message}");
+        }
+    }
+
+    // Retry mechanism for Firebase initialization
+    void InitializeFirebaseWithRetry()
+    {
+        if (isInitializing) return;
+
+        UnityEngine.Debug.Log("Attempting to initialize Firebase...");
+        loadingPanel?.SetActive(true);
+
+        isInitializing = true;
+        Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
+            var dependencyStatus = task.Result;
+            if (dependencyStatus == Firebase.DependencyStatus.Available)
+            {
+                try
+                {
+                    auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
+                    if (auth != null)
+                    {
+                        auth.StateChanged += AuthStateChanged;
+                        AuthStateChanged(this, null);
+                        isFirebaseInitialized = true;
+                        UnityEngine.Debug.Log("Firebase Auth initialized successfully");
+
+                        
+                        databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
+
+                        // נסה לשחזר סשן קודם
+                        if (auth.CurrentUser != null && auth.CurrentUser.IsValid())
+                        {
+                            user = auth.CurrentUser;
+                            isSignIn = true;
+                            isSigned = true;
+                            profileUserName_Text.text = user.DisplayName;
+                            profileUserEmail_Text.text = user.Email;
+                            OpenProfilePanel();
+                        }
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogError("Firebase Auth instance is null");
+                        showNotificationMessage("Error", "Firebase authentication could not be initialized");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogError($"Error initializing Firebase Auth: {ex.Message}");
+                    showNotificationMessage("Error", $"Firebase initialization error: {ex.Message}");
+                }
+            }
+
+            else
+            {
+                UnityEngine.Debug.LogError(System.String.Format(
+                  "Could not resolve all Firebase dependencies: {0}", dependencyStatus));
+                showNotificationMessage("Error", "Failed to initialize Firebase. Please restart the app.");
+            }
+
+            isInitializing = false;
+            loadingPanel?.SetActive(false);
+        });
     }
 
     void AuthStateChanged(object sender, System.EventArgs eventArgs)
@@ -328,6 +434,10 @@ public class FirebaseController : MonoBehaviour
                 }
 
                 UnityEngine.Debug.Log("User profile updated successfully.");
+
+                // הוסף את השורה הזו לאתחול הניקוד
+                InitializeUserScore(user.UserId);
+
                 showNotificationMessage("Success", "Account Successfully created");
 
                 // Update UI with new user info
@@ -343,15 +453,15 @@ public class FirebaseController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // Check for existing auth sessions first
-        if (Firebase.Auth.FirebaseAuth.DefaultInstance != null &&
-            Firebase.Auth.FirebaseAuth.DefaultInstance.CurrentUser != null)
-        {
-            UnityEngine.Debug.Log("User already logged in");
-            // Initialize anyway to set up event handlers
-            InitializeFirebase();
-        }
+        // Show loading panel initially
+        loadingPanel?.SetActive(true);
 
+        // Initialize Firebase with a small delay to ensure Unity is fully ready
+        Invoke("DelayedFirebaseInitialization", 0.5f);
+    }
+
+    void DelayedFirebaseInitialization()
+    {
         // Initialize Firebase
         Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
             var dependencyStatus = task.Result;
@@ -359,13 +469,32 @@ public class FirebaseController : MonoBehaviour
             {
                 // Create and hold a reference to your FirebaseApp
                 InitializeFirebase();
+
+                // Check for existing auth sessions
+                if (auth != null && auth.CurrentUser != null && auth.CurrentUser.IsValid())
+                {
+                    user = auth.CurrentUser;
+                    isSignIn = true;
+                    isSigned = true;
+                    profileUserName_Text.text = user.DisplayName;
+                    profileUserEmail_Text.text = user.Email;
+                    OpenProfilePanel();
+                }
+                else
+                {
+                    OpenLoginPanel();
+                }
             }
             else
             {
                 UnityEngine.Debug.LogError(System.String.Format(
                   "Could not resolve all Firebase dependencies: {0}", dependencyStatus));
                 showNotificationMessage("Error", "Failed to initialize Firebase. Please restart the app.");
+                OpenLoginPanel();
             }
+
+            // Hide loading panel
+            loadingPanel?.SetActive(false);
         });
     }
 
@@ -375,17 +504,14 @@ public class FirebaseController : MonoBehaviour
     void Update()
     {
         // Handle auto-login when user is signed in
-        if (isSignIn)
+        if (isSignIn && !isSigned && isFirebaseInitialized)
         {
-            if (!isSigned)
+            isSigned = true;
+            if (user != null)
             {
-                isSigned = true;
-                if (user != null)
-                {
-                    profileUserName_Text.text = "" + user.DisplayName;
-                    profileUserEmail_Text.text = "" + user.Email;
-                    OpenProfilePanel();
-                }
+                profileUserName_Text.text = "" + user.DisplayName;
+                profileUserEmail_Text.text = "" + user.Email;
+                OpenProfilePanel();
             }
         }
     }
@@ -397,7 +523,120 @@ public class FirebaseController : MonoBehaviour
         // For now, just log to console
         UnityEngine.Debug.Log($"{title}: {message}");
 
+        // Update UI error text if available
+        if (errorText != null)
+        {
+            errorText.text = $"{title}: {message}";
+        }
+
         // TODO: Replace with your UI notification system, like:
         // UIManager.Instance.ShowNotification(title, message);
+    }
+
+    private void InitializeUserScore(string userId)
+    {
+        if (databaseReference != null)
+        {
+            // יצירת אובייקט המייצג את נתוני המשתמש
+            UserData userData = new UserData
+            {
+                score = 0,
+                displayName = auth.CurrentUser.DisplayName,
+                lastLogin = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+
+            string json = JsonUtility.ToJson(userData);
+
+            // שמירת מידע המשתמש בדאטאבייס
+            Task task = databaseReference.Child("users").Child(userId).SetRawJsonValueAsync(json);
+            task.ContinueWith(t => {
+                if (t.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Failed to initialize user score: {t.Exception}");
+                    // כדי להריץ קוד UI על ה-main thread:
+                    UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                        showNotificationMessage("Warning", "Failed to initialize game score");
+                    });
+                }
+                else if (t.IsCompleted)
+                {
+                    UnityEngine.Debug.Log($"User score initialized successfully for user {userId}");
+                }
+            });
+        }
+        else
+        {
+            UnityEngine.Debug.LogError("Database reference is null. Cannot initialize user score.");
+        }
+    }
+    // עדכון פונקציות נוספות ללא שימוש ב-ContinueWithOnMainThread
+    public void UpdateUserScore(int newScore)
+    {
+        if (auth.CurrentUser != null && databaseReference != null)
+        {
+            string userId = auth.CurrentUser.UserId;
+            Task task = databaseReference.Child("users").Child(userId).Child("score").SetValueAsync(newScore);
+            task.ContinueWith(t => {
+                if (t.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Score update failed: {t.Exception}");
+                    UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                        showNotificationMessage("Error", "Failed to update score");
+                    });
+                }
+                else if (t.IsCompleted)
+                {
+                    UnityEngine.Debug.Log($"Score updated to {newScore} for user {userId}");
+                }
+            });
+        }
+    }
+
+    public void GetCurrentUserScore(System.Action<int> callback)
+    {
+        if (auth.CurrentUser != null && databaseReference != null)
+        {
+            string userId = auth.CurrentUser.UserId;
+            databaseReference.Child("users").Child(userId).Child("score").GetValueAsync().ContinueWith(task => {
+                if (task.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Failed to get user score: {task.Exception}");
+                    UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                        callback(-1); // קוד שגיאה
+                    });
+                }
+                else if (task.IsCompleted)
+                {
+                    DataSnapshot snapshot = task.Result;
+                    if (snapshot.Exists)
+                    {
+                        int score = Convert.ToInt32(snapshot.Value);
+                        UnityEngine.Debug.Log($"Current score for user {userId}: {score}");
+                        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                            callback(score);
+                        });
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogWarning($"No score found for user {userId}");
+                        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                            callback(0); // ניקוד ברירת מחדל
+                        });
+                    }
+                }
+            });
+        }
+        else
+        {
+            callback(-1); // קוד שגיאה
+        }
+    }
+
+    [System.Serializable]
+    public class UserData
+    {
+        public int score;
+        public string displayName;
+        public string lastLogin;
     }
 }
