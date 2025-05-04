@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "147283999605",
+    "firebase_url": "https://rpsgame-41f1f-default-rtdb.firebaseio.com",
+    "project_id": "rpsgame-41f1f",
+    "storage_bucket": "rpsgame-41f1f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147283999605:android:1f39f8a0ccd605239ab13c",
+        "android_client_info": {
+          "package_name": "com.BIU.RPSgame"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkvMY8sfwjPIUduQRTf3gXVa-0LSIxV2I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
