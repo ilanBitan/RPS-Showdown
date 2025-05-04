@@ -8,7 +8,7 @@ public class GameSetupManager : MonoBehaviour
     private List<RPSUnit> player1Units;
     private List<RPSUnit> player2Units;
 
-    private int selectionStep = 0; // 0 = F1, 1 = T1, 2 = F2, 3 = T2
+    private int selectionStep = 0;
     private bool setupComplete = false;
 
     private void Awake()
@@ -32,11 +32,14 @@ public class GameSetupManager : MonoBehaviour
 
         foreach (var unit in player2Units)
         {
-            unit.EnableSetupSelection();
+            unit.DisableSetupSelection();
             unit.ResetVisual();
         }
 
-        Debug.Log("🎯 Setup phase started. Select FLAG for Player 1.");
+        Debug.Log("🎯 Setup started. Select FLAG for Player 1.");
+
+        // ✅ הוספת העברת היחידות ל־GameManager
+        GameManager.Instance?.SetPlayersUnits(player1Units, player2Units);
     }
 
     public void OnUnitClicked(RPSUnit unit)
@@ -58,7 +61,17 @@ public class GameSetupManager : MonoBehaviour
                 unit.role = RPSUnit.UnitRole.Trap;
                 unit.UpdateVisual();
                 selectionStep++;
-                Debug.Log("🎯 Player 1 Trap selected. Select FLAG for Player 2.");
+
+                if (GameModeManager.Instance.SelectedMode == GameMode.PvP)
+                {
+                    Debug.Log("🎯 Now select FLAG for Player 2.");
+                }
+                else
+                {
+                    Debug.Log("🤖 AI is choosing FLAG and TRAP...");
+                    SelectFTForAI();
+                    FinalizeSetup();
+                }
                 break;
 
             case 2:
@@ -78,9 +91,28 @@ public class GameSetupManager : MonoBehaviour
         }
     }
 
-    void FinalizeSetup()
+    private void SelectFTForAI()
     {
-        Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly");
+        List<RPSUnit> available = player2Units.FindAll(u => u.role == RPSUnit.UnitRole.None);
+        if (available.Count < 2) return;
+
+        int index1 = Random.Range(0, available.Count);
+        RPSUnit flag = available[index1];
+        flag.role = RPSUnit.UnitRole.Flag;
+        flag.UpdateVisual();
+
+        available.RemoveAt(index1);
+        int index2 = Random.Range(0, available.Count);
+        RPSUnit trap = available[index2];
+        trap.role = RPSUnit.UnitRole.Trap;
+        trap.UpdateVisual();
+
+        Debug.Log($"🤖 AI selected FLAG: {flag.name}, TRAP: {trap.name}");
+    }
+
+    private void FinalizeSetup()
+    {
+        Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
 
         AssignRandomRPS(player1Units);
         AssignRandomRPS(player2Units);
@@ -89,14 +121,24 @@ public class GameSetupManager : MonoBehaviour
         foreach (var unit in player2Units) unit.DisableSetupSelection();
 
         setupComplete = true;
-        Debug.Log("✅ Setup complete! Let the game begin.");
+        Debug.Log("✅ Setup complete. Game begins!");
 
-        // ⏳ מפעילים את הטיימר רק עכשיו
         TurnTimerManager.Instance?.ActivateGameTimer();
         TurnTimerManager.Instance?.StartTurn();
+
+        var mode = GameModeManager.Instance.SelectedMode;
+        if (mode == GameMode.PvE_Easy || mode == GameMode.PvE_Medium || mode == GameMode.PvE_Hard)
+        {
+            if (FindObjectOfType<AIPlayerController>() == null)
+            {
+                GameObject aiObj = new GameObject("AIPlayerController");
+                aiObj.AddComponent<AIPlayerController>();
+                Debug.Log("🧠 AIPlayerController instantiated at runtime.");
+            }
+        }
     }
 
-    void AssignRandomRPS(List<RPSUnit> units)
+    private void AssignRandomRPS(List<RPSUnit> units)
     {
         List<RPSUnit> toAssign = units.FindAll(u => u.role == RPSUnit.UnitRole.None);
 
@@ -104,7 +146,6 @@ public class GameSetupManager : MonoBehaviour
         int countPerKind = total / 3;
 
         List<RPSUnit.RPSKind> kinds = new List<RPSUnit.RPSKind>();
-
         for (int i = 0; i < countPerKind; i++)
         {
             kinds.Add(RPSUnit.RPSKind.Rock);
@@ -126,12 +167,12 @@ public class GameSetupManager : MonoBehaviour
         }
     }
 
-    void Shuffle<T>(List<T> list)
+    private void Shuffle<T>(List<T> list)
     {
         for (int i = 0; i < list.Count; i++)
         {
-            int rnd = Random.Range(i, list.Count);
-            (list[i], list[rnd]) = (list[rnd], list[i]);
+            int rand = Random.Range(i, list.Count);
+            (list[i], list[rand]) = (list[rand], list[i]);
         }
     }
 

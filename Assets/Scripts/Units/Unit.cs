@@ -8,4 +8,9 @@ public abstract class Unit : MonoBehaviour
 
     public abstract string UnitType { get; }
     public abstract bool Beats(Unit other);
+
+    public virtual void SetPosition(Vector2Int newPos)
+    {
+        Position = newPos;
+    }
 }

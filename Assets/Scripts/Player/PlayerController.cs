@@ -1,17 +1,24 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
     private RPSUnit selectedUnit;
     private Outline activeOutline;
-
+    public GameObject playAgainContainer;
     public int columns = 7;
     public int rows = 6;
     public int myPlayerId = 1;
 
+    public static bool gameEnded = false; // 🛡️ משתנה שמנהל סיום משחק
+
+
     void Update()
     {
+        if (gameEnded)
+            return;
+
         if (TurnManager.Instance == null) return;
         if (!TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive()) return;
@@ -27,12 +34,21 @@ public class PlayerController : MonoBehaviour
 
         if (direction != Vector2Int.zero)
         {
-            TryMoveUnit(selectedUnit, direction);
+            StartCoroutine(HandleJumpAndMove(selectedUnit, direction));
         }
     }
 
     public void SelectUnit(RPSUnit unit)
     {
+        if (gameEnded)
+            return;
+
+        if (unit.role == RPSUnit.UnitRole.Flag || unit.role == RPSUnit.UnitRole.Trap)
+        {
+            Debug.Log("⛔ You cannot select a Flag or Trap.");
+            return;
+        }
+
         if (unit.playerId != myPlayerId) return;
         if (!unit.IsMovable()) return;
         if (TurnManager.Instance == null || !TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
@@ -57,6 +73,23 @@ public class PlayerController : MonoBehaviour
         selectedUnit = null;
     }
 
+    System.Collections.IEnumerator HandleJumpAndMove(RPSUnit unit, Vector2Int dir)
+    {
+        // Trigger jump animation
+        Animator anim = unit.GetComponent<Animator>();
+        if (anim != null)
+        {
+    anim.SetInteger("playerId", unit.playerId); // 1 for player, 2 for enemy
+    anim.ResetTrigger("jump");
+    anim.SetTrigger("jump");
+        }
+
+        // Wait a short time to allow jump animation to show
+        yield return new WaitForSeconds(0.2f);
+
+        TryMoveUnit(unit, dir);
+    }
+
     void TryMoveUnit(RPSUnit unit, Vector2Int dir)
     {
         Vector2Int target = unit.Position + dir;
@@ -69,6 +102,7 @@ public class PlayerController : MonoBehaviour
 
         foreach (var other in FindObjectsOfType<RPSUnit>())
         {
+            if (other == null) continue;
             if (other == unit) continue;
             if (other.Position == target)
             {
@@ -78,10 +112,30 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
-                // 💣 TRAP
+                // 🏁 FLAG - תפיסת דגל
+                if (other.role == RPSUnit.UnitRole.Flag)
+                {
+                    Debug.Log("🎯 You captured the enemy FLAG!");
+
+                    other.Reveal();
+                    MoveUnitTo(unit, target);
+                    Destroy(other.gameObject);
+                    ClearSelection();
+                    gameEnded = true; // ❗❗ המשחק ננעל
+                    if (playAgainContainer != null)
+                    {
+                        playAgainContainer.SetActive(true);
+                    }
+
+                    return;
+                }
+
+                // 💣 TRAP - מלכודת
                 if (other.role == RPSUnit.UnitRole.Trap)
                 {
                     Debug.Log("💥 Trap triggered! Attacker destroyed.");
+
+                    unit.Reveal();
                     Destroy(unit.gameObject);
                     ClearSelection();
                     TurnManager.Instance?.EndTurn();
@@ -95,8 +149,6 @@ public class PlayerController : MonoBehaviour
                     Destroy(other.gameObject);
                     MoveUnitTo(unit, target);
                     ClearSelection();
-
-                    // כאן אפשר להוסיף לוגיקת ניצחון עתידית
                     Debug.Log($"🏆 Player {myPlayerId} wins the game!");
                     return;
                 }
@@ -109,7 +161,10 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
-                // ✅ רגיל – קרב מבוסס חוקים
+                // ✅ קרב רגיל
+                unit.Reveal();
+                other.Reveal();
+
                 if (unit.Beats(other))
                 {
                     Debug.Log("✅ Attacker wins – replacing enemy");
@@ -128,24 +183,51 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // אין יריב – פשוט זז
+        // אין יריב - תזוזה רגילה
         MoveUnitTo(unit, target);
         ClearSelection();
         TurnManager.Instance?.EndTurn();
     }
 
-    void MoveUnitTo(RPSUnit unit, Vector2Int target)
+void MoveUnitTo(RPSUnit unit, Vector2Int target)
+{
+    Transform targetTile = GetTileTransform(target);
+    if (targetTile != null)
     {
-        Transform targetTile = GetTileTransform(target);
-        if (targetTile != null)
-        {
-            unit.transform.SetParent(targetTile, false);
-            RectTransform rt = unit.GetComponent<RectTransform>();
-            rt.anchoredPosition = Vector2.zero;
-            unit.Position = target;
-            Debug.Log($"✅ Unit moved to [col {target.x}, row {target.y}]");
-        }
+        StartCoroutine(SmoothMove(unit, targetTile, target));
     }
+}
+System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Vector2Int targetGridPos)
+{
+    RectTransform rt = unit.GetComponent<RectTransform>();
+    if (rt == null) yield break;
+
+    Vector3 start = rt.position;
+    Vector3 end = targetTile.position;
+
+    float elapsed = 0f;
+    float duration = 0.25f; // smooth time (adjust as needed)
+
+    while (elapsed < duration)
+    {
+        rt.position = Vector3.Lerp(start, end, elapsed / duration);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    // Snap to final position
+    rt.position = end;
+
+    // Update hierarchy and grid data
+    unit.transform.SetParent(targetTile, false);
+    rt.anchoredPosition = Vector2.zero;
+    unit.Position = targetGridPos;
+    BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
+
+
+    Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+}
+
 
     Transform GetTileTransform(Vector2Int pos)
     {
@@ -154,4 +236,42 @@ public class PlayerController : MonoBehaviour
         if (board == null || index >= board.childCount) return null;
         return board.GetChild(index);
     }
+    public void OnPlayAgainButtonClicked()
+    {
+        // אפס הכל לפני טעינה
+        PlayerController.gameEnded = false;
+
+        // תאפס את הטיימר אם יש
+        TurnTimerManager timer = FindObjectOfType<TurnTimerManager>();
+        if (timer != null)
+        {
+            Destroy(timer.gameObject);
+        }
+
+        // תאפס את ה-AI אם יש
+        AIPlayerController ai = FindObjectOfType<AIPlayerController>();
+        if (ai != null)
+        {
+            Destroy(ai.gameObject);
+        }
+
+        // תאפס את ה-TurnManager אם יש
+        TurnManager tm = FindObjectOfType<TurnManager>();
+        if (tm != null)
+        {
+            Destroy(tm.gameObject);
+        }
+
+        // תאפס את ה-BoardManager אם יש
+        BoardManager bm = FindObjectOfType<BoardManager>();
+        if (bm != null)
+        {
+            Destroy(bm.gameObject);
+        }
+
+        // ואז טען מחדש את הסצנה
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+
 }

@@ -1,5 +1,6 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
+using System.Collections;
 
 public class RPSUnit : Unit
 {
@@ -9,7 +10,17 @@ public class RPSUnit : Unit
     public RPSKind Kind;
     public UnitRole role = UnitRole.None;
 
+    private bool isRevealed = false;
+    public bool IsRevealed => isRevealed;
+
     public override string UnitType => Kind.ToString();
+
+    private UnitVisualController visualController;
+
+    private void Awake()
+    {
+        visualController = GetComponent<UnitVisualController>();
+    }
 
     public override bool Beats(Unit other)
     {
@@ -39,18 +50,35 @@ public class RPSUnit : Unit
     public void UpdateVisual()
     {
         var text = GetComponentInChildren<TextMeshProUGUI>();
+
         if (text != null)
         {
-            text.text = GetLetter();
+            text.text = isRevealed ? GetLetter() : "";
+            text.color = Color.white;
         }
+
+        if (visualController != null)
+        {
+            visualController.UpdateWeaponVisual(isRevealed ? GetLetter() : "");
+        }
+    }
+
+    public void Reveal()
+    {
+        isRevealed = true;
+        UpdateVisual();
+        Debug.Log($"📣 {name} Revealed → {GetLetter()}");
     }
 
     public void ResetVisual()
     {
         var text = GetComponentInChildren<TextMeshProUGUI>();
         if (text != null)
-        {
             text.text = "";
+
+        if (visualController != null)
+        {
+            visualController.UpdateWeaponVisual("");
         }
     }
 
@@ -58,22 +86,170 @@ public class RPSUnit : Unit
     {
         var clickable = GetComponent<SelectableUnit>();
         if (clickable != null)
-        {
             clickable.onSetupClick = () => GameSetupManager.Instance.OnUnitClicked(this);
-        }
     }
 
     public void DisableSetupSelection()
     {
         var clickable = GetComponent<SelectableUnit>();
         if (clickable != null)
-        {
             clickable.onSetupClick = null;
-        }
     }
 
     public bool IsMovable()
     {
         return role != UnitRole.Flag && role != UnitRole.Trap;
+    }
+
+    public bool TryMove(Vector2Int direction)
+    {
+        Vector2Int targetPos = Position + direction;
+
+        if (!BoardManager.Instance.IsInsideBoard(targetPos))
+        {
+            Debug.Log($"⛔ Move is out of board bounds");
+            return false;
+        }
+
+        Unit target = BoardManager.Instance.GetUnitAt(targetPos);
+
+        if (target != null)
+        {
+            if (target.playerId == playerId)
+            {
+                Debug.Log("🚫 Cell is occupied by your own unit");
+                return false;
+            }
+
+            RPSUnit enemy = target as RPSUnit;
+            if (enemy == null)
+            {
+                Debug.Log("❌ Target is not a valid RPS unit");
+                return false;
+            }
+
+            this.Reveal();
+            enemy.Reveal();
+
+            if (enemy.role == UnitRole.Trap)
+            {
+                Debug.Log("💥 Trap triggered! Unit destroyed.");
+                BoardManager.Instance.RemoveUnit(this);
+                Destroy(this.gameObject);
+                return false;
+            }
+
+            if (enemy.role == UnitRole.Flag)
+            {
+                Debug.Log("🎯 Flag captured!");
+                BoardManager.Instance.RemoveUnit(enemy);
+                Destroy(enemy.gameObject);
+                MoveTo(targetPos);
+                BoardManager.Instance.PlaceUnit(this, targetPos);
+
+           /*     // ✨ הצג את מסך הניצחון
+                GameEndHandler handler = FindObjectOfType<GameEndHandler>();
+                if (handler != null)
+                    handler.ShowVictory(playerId == 1 ? "Player 1" : "Player 2");
+*/
+                return true;
+            }
+
+
+            if (Kind == enemy.Kind)
+            {
+                Debug.Log("⚔️ Equal units – triggering RPS battle");
+                if (BattleManager.Instance != null)
+                    BattleManager.Instance.StartBattle(this, enemy, targetPos);
+                return false;
+            }
+
+            if (Beats(enemy))
+            {
+                Debug.Log($"✅ {name} wins – replacing {enemy.name}");
+                BoardManager.Instance.RemoveUnit(enemy);
+                Destroy(enemy.gameObject);
+                MoveTo(targetPos);
+                BoardManager.Instance.PlaceUnit(this, targetPos);
+                return true;
+            }
+
+            if (enemy.Beats(this))
+            {
+                Debug.Log($"💀 {name} loses to {enemy.name} and is destroyed");
+                BoardManager.Instance.RemoveUnit(this);
+                Destroy(this.gameObject);
+                return false;
+            }
+
+            Debug.Log("❓ Unhandled combat case");
+            return false;
+        }
+
+        MoveTo(targetPos);
+        BoardManager.Instance.PlaceUnit(this, targetPos);
+        return true;
+    }
+
+public void MoveTo(Vector2Int newPos)
+{
+    // Handle board management logic
+    BoardManager.Instance.MoveUnit(this, newPos);
+    SetPosition(newPos);
+    
+    // Get the target tile transform
+    Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
+    if (targetTile != null)
+    {
+        // Start the animation coroutine
+        StartCoroutine(SmoothMove(targetTile, newPos));
+    }
+    
+    Debug.Log($"✅ Unit move initiated to → Column: {newPos.x}, Row: {newPos.y}");
+}
+
+private IEnumerator SmoothMove(Transform targetTile, Vector2Int targetGridPos)
+{
+    // Trigger jump animation
+    Animator anim = GetComponent<Animator>();
+    if (anim != null)
+    {
+        anim.SetInteger("playerId", playerId);
+        anim.ResetTrigger("jump");
+        anim.SetTrigger("jump");
+    }
+
+    // Wait for animation to start
+    yield return new WaitForSeconds(0.2f);
+    
+    RectTransform rt = GetComponent<RectTransform>();
+    if (rt == null) yield break;
+
+    Vector3 start = rt.position;
+    Vector3 end = targetTile.position;
+
+    float elapsed = 0f;
+    float duration = 0.25f; // smooth time
+
+    while (elapsed < duration)
+    {
+        rt.position = Vector3.Lerp(start, end, elapsed / duration);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    // Snap to final position
+    rt.position = end;
+
+    // Update hierarchy and grid data
+    transform.SetParent(targetTile, false);
+    rt.anchoredPosition = Vector2.zero;
+    
+    Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+}
+
+    public bool IsEnemy(RPSUnit other)
+    {
+        return other != null && other.playerId != this.playerId;
     }
 }
