@@ -25,6 +25,9 @@ public class FirebaseController : MonoBehaviour
     private bool isInitializing = false;
     private DatabaseReference databaseReference;
 
+    // Queue to store pending operations
+    private Queue<Action> pendingOperations = new Queue<Action>();
+
     public void OpenLoginPanel()
     {
         loginPanel.SetActive(true);
@@ -59,34 +62,41 @@ public class FirebaseController : MonoBehaviour
 
     public void LoginUser()
     {
-        // Check if Firebase is still initializing
-        if (isInitializing)
-        {
-            showNotificationMessage("Please wait", "Firebase is still initializing...");
-            return;
-        }
+        // Show loading panel immediately to give feedback
+        loadingPanel?.SetActive(true);
 
-        // Check if Firebase is initialized before attempting login
-        if (!isFirebaseInitialized)
+        // Check if any field is empty
+        if (string.IsNullOrEmpty(loginEmail.text) || string.IsNullOrEmpty(loginPassword.text))
         {
-            showNotificationMessage("Error", "Firebase is not initialized. Trying to reconnect...");
-            InitializeFirebaseWithRetry();
+            loadingPanel?.SetActive(false);
+            showNotificationMessage("Error", "Please enter email and password");
             return;
         }
 
         UnityEngine.Debug.Log($"Attempting login with email: {loginEmail.text}");
 
-        // Check if any field is empty
-        if (string.IsNullOrEmpty(loginEmail.text) || string.IsNullOrEmpty(loginPassword.text))
+        // Store login credentials for later use if needed
+        string email = loginEmail.text;
+        string password = loginPassword.text;
+
+        // If Firebase is initialized, login directly
+        if (isFirebaseInitialized)
         {
-            showNotificationMessage("Error", "Please enter email and password");
-            return;
+            SignInUser(email, password);
         }
-
-        // Show loading panel if it exists
-        loadingPanel?.SetActive(true);
-
-        SignInUser(loginEmail.text, loginPassword.text);
+        // If Firebase is being initialized, queue the login operation
+        else if (isInitializing)
+        {
+            UnityEngine.Debug.Log("Firebase is initializing. Queuing login operation.");
+            pendingOperations.Enqueue(() => SignInUser(email, password));
+        }
+        // If Firebase isn't initialized or initializing, start initialization and queue login
+        else
+        {
+            UnityEngine.Debug.Log("Firebase not initialized. Starting initialization and queuing login.");
+            pendingOperations.Enqueue(() => SignInUser(email, password));
+            InitializeFirebaseWithRetry();
+        }
     }
 
     public void SignUpUser()
@@ -169,6 +179,14 @@ public class FirebaseController : MonoBehaviour
 
     public void SignInUser(string email, string password)
     {
+        if (!isFirebaseInitialized)
+        {
+            UnityEngine.Debug.LogError("Attempted to sign in before Firebase was initialized");
+            loadingPanel?.SetActive(false);
+            showNotificationMessage("Error", "Firebase is not ready yet. Please try again.");
+            return;
+        }
+
         auth.SignInWithEmailAndPasswordAsync(email, password).ContinueWithOnMainThread(task => {
             // Hide loading panel if it exists
             loadingPanel?.SetActive(false);
@@ -189,9 +207,12 @@ public class FirebaseController : MonoBehaviour
             UnityEngine.Debug.LogFormat("User signed in successfully: {0} ({1})",
                 result.User.DisplayName, result.User.UserId);
 
+            user = result.User;
+            isSignIn = true;
+            isSigned = true;
+
             profileUserName_Text.text = "" + result.User.DisplayName;
             profileUserEmail_Text.text = "" + result.User.Email;
-
             OpenProfilePanel();
         });
     }
@@ -293,13 +314,14 @@ public class FirebaseController : MonoBehaviour
             {
                 auth.StateChanged += AuthStateChanged;
                 AuthStateChanged(this, null);
-
-                // הוסף את השורה הזו לאתחול ה-Database
+                // Initialize Database reference
                 databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
-
                 isFirebaseInitialized = true;
                 isInitializing = false;
                 UnityEngine.Debug.Log("Firebase Auth initialized successfully");
+
+                // Process any pending operations that were queued while initializing
+                ProcessPendingOperations();
             }
             else
             {
@@ -316,6 +338,24 @@ public class FirebaseController : MonoBehaviour
         }
     }
 
+    // Process any operations that were queued while Firebase was initializing
+    void ProcessPendingOperations()
+    {
+        UnityEngine.Debug.Log($"Processing {pendingOperations.Count} pending operations");
+        while (pendingOperations.Count > 0)
+        {
+            try
+            {
+                Action operation = pendingOperations.Dequeue();
+                operation.Invoke();
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"Error processing pending operation: {ex.Message}");
+            }
+        }
+    }
+
     // Retry mechanism for Firebase initialization
     void InitializeFirebaseWithRetry()
     {
@@ -323,8 +363,8 @@ public class FirebaseController : MonoBehaviour
 
         UnityEngine.Debug.Log("Attempting to initialize Firebase...");
         loadingPanel?.SetActive(true);
-
         isInitializing = true;
+
         Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
             var dependencyStatus = task.Result;
             if (dependencyStatus == Firebase.DependencyStatus.Available)
@@ -339,19 +379,25 @@ public class FirebaseController : MonoBehaviour
                         isFirebaseInitialized = true;
                         UnityEngine.Debug.Log("Firebase Auth initialized successfully");
 
-                        
                         databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
 
-                        // נסה לשחזר סשן קודם
+                        // Check for existing auth sessions
                         if (auth.CurrentUser != null && auth.CurrentUser.IsValid())
                         {
                             user = auth.CurrentUser;
                             isSignIn = true;
                             isSigned = true;
-                            profileUserName_Text.text = user.DisplayName;
-                            profileUserEmail_Text.text = user.Email;
-                            OpenProfilePanel();
+
+                            if (profileUserName_Text != null && profileUserEmail_Text != null)
+                            {
+                                profileUserName_Text.text = user.DisplayName;
+                                profileUserEmail_Text.text = user.Email;
+                                OpenProfilePanel();
+                            }
                         }
+
+                        // Process any pending operations
+                        ProcessPendingOperations();
                     }
                     else
                     {
@@ -365,7 +411,6 @@ public class FirebaseController : MonoBehaviour
                     showNotificationMessage("Error", $"Firebase initialization error: {ex.Message}");
                 }
             }
-
             else
             {
                 UnityEngine.Debug.LogError(System.String.Format(
@@ -455,7 +500,6 @@ public class FirebaseController : MonoBehaviour
     {
         // Show loading panel initially
         loadingPanel?.SetActive(true);
-
         // Initialize Firebase with a small delay to ensure Unity is fully ready
         Invoke("DelayedFirebaseInitialization", 0.5f);
     }
