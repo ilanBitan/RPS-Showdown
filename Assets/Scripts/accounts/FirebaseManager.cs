@@ -31,6 +31,10 @@ public class FirebaseManager : MonoBehaviour
     private FirebaseUser currentUser;
     private DatabaseReference databaseReference;
 
+    // Database listener reference
+    private DatabaseReference userDataRef;
+    private EventHandler<ValueChangedEventArgs> userDataListener;
+
     // State tracking
     private bool isFirebaseInitialized = false;
     private bool isInitializing = false;
@@ -41,6 +45,7 @@ public class FirebaseManager : MonoBehaviour
     public event Action<bool, string> OnUserAuthenticated;
     public event Action<bool, string> OnUserRegistered;
     public event Action OnUserSignedOut;
+    public event Action<UserData> OnUserDataUpdated; // Added missing event
 
     private void Awake()
     {
@@ -67,6 +72,9 @@ public class FirebaseManager : MonoBehaviour
             auth.StateChanged -= AuthStateChanged;
             auth = null;
         }
+
+        // Clean up database listener
+        RemoveUserDataListener();
     }
 
     #region Firebase Initialization
@@ -99,6 +107,8 @@ public class FirebaseManager : MonoBehaviour
                         {
                             currentUser = auth.CurrentUser;
                             OnUserAuthenticated?.Invoke(true, "User already signed in");
+                            // Set up listener for user data
+                            SetupUserDataListener(currentUser.UserId);
                         }
 
                         // Process any pending operations
@@ -154,6 +164,7 @@ public class FirebaseManager : MonoBehaviour
             if (!signedIn && currentUser != null)
             {
                 UnityEngine.Debug.Log("Signed out " + currentUser.UserId);
+                RemoveUserDataListener(); // Remove listener when user signs out
                 OnUserSignedOut?.Invoke();
             }
 
@@ -162,6 +173,7 @@ public class FirebaseManager : MonoBehaviour
             if (signedIn)
             {
                 UnityEngine.Debug.Log("Signed in " + currentUser.UserId);
+                SetupUserDataListener(currentUser.UserId); // Setup listener when user signs in
             }
         }
     }
@@ -214,6 +226,7 @@ public class FirebaseManager : MonoBehaviour
                 result.User.DisplayName, result.User.UserId);
 
             currentUser = result.User;
+            SetupUserDataListener(currentUser.UserId); // Setup listener after successful login
             callback?.Invoke(true, "Login successful");
             OnUserAuthenticated?.Invoke(true, "Login successful");
         });
@@ -276,6 +289,7 @@ public class FirebaseManager : MonoBehaviour
                 InitializeUserData(user.UserId, displayName);
 
                 currentUser = user;
+                SetupUserDataListener(currentUser.UserId); // Setup listener after registration
                 callback?.Invoke(true, "Account successfully created");
                 OnUserRegistered?.Invoke(true, "Account successfully created");
             });
@@ -286,6 +300,7 @@ public class FirebaseManager : MonoBehaviour
     {
         if (auth != null)
         {
+            RemoveUserDataListener(); // Remove listener before signing out
             auth.SignOut();
             OnUserSignedOut?.Invoke();
         }
@@ -383,7 +398,9 @@ public class FirebaseManager : MonoBehaviour
             {
                 score = 0,
                 displayName = displayName,
-                lastLogin = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                lastLogin = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                wins = 0,
+                losses = 0
             };
 
             string json = JsonUtility.ToJson(userData);
@@ -404,6 +421,84 @@ public class FirebaseManager : MonoBehaviour
         else
         {
             UnityEngine.Debug.LogError("Database reference is null. Cannot initialize user data.");
+        }
+    }
+
+    // Add/modify these methods to support real-time database listening
+    private void SetupUserDataListener(string userId)
+    {
+        // First remove any existing listener
+        RemoveUserDataListener();
+
+        if (databaseReference != null)
+        {
+            // Set up real-time database reference to user data
+            userDataRef = databaseReference.Child("users").Child(userId);
+
+            // Create and register the listener
+            userDataListener = (sender, args) =>
+            {
+                if (args.DatabaseError != null)
+                {
+                    UnityEngine.Debug.LogError($"Database error: {args.DatabaseError.Message}");
+                    return;
+                }
+
+                if (args.Snapshot != null && args.Snapshot.Exists)
+                {
+                    try
+                    {
+                        string json = args.Snapshot.GetRawJsonValue();
+                        UserData userData = JsonUtility.FromJson<UserData>(json);
+
+                        // Use Unity's main thread dispatcher to invoke the event
+                        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                            OnUserDataUpdated?.Invoke(userData);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        UnityEngine.Debug.LogError($"Error parsing user data: {ex.Message}");
+                    }
+                }
+            };
+
+            // Add the value event listener
+            userDataRef.ValueChanged += userDataListener;
+            UnityEngine.Debug.Log($"Set up real-time listener for user {userId}");
+        }
+    }
+
+    private void RemoveUserDataListener()
+    {
+        if (userDataRef != null && userDataListener != null)
+        {
+            userDataRef.ValueChanged -= userDataListener;
+            userDataRef = null;
+            userDataListener = null;
+            UnityEngine.Debug.Log("Removed real-time user data listener");
+        }
+    }
+
+    // Add this method for manual refresh
+    public void ForceRefreshUserStats()
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            UnityEngine.Debug.Log($"Forcing refresh of user stats for {userId}");
+
+            GetUserStats((userData) => {
+                if (userData != null)
+                {
+                    // Manually invoke the event with the fetched data
+                    OnUserDataUpdated?.Invoke(userData);
+                }
+            });
+        }
+        else
+        {
+            UnityEngine.Debug.LogError("Cannot refresh stats - User not signed in");
         }
     }
 
@@ -466,5 +561,158 @@ public class FirebaseManager : MonoBehaviour
         }
     }
 
+    // New method to update user wins
+    public void UpdateUserWins(int newWins)
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            Task task = databaseReference.Child("users").Child(userId).Child("wins").SetValueAsync(newWins);
+            task.ContinueWith(t => {
+                if (t.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Wins update failed: {t.Exception}");
+                }
+                else if (t.IsCompleted)
+                {
+                    UnityEngine.Debug.Log($"Wins updated to {newWins} for user {userId}");
+                }
+            });
+        }
+    }
+
+    // New method to update user losses
+    public void UpdateUserLosses(int newLosses)
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            Task task = databaseReference.Child("users").Child(userId).Child("losses").SetValueAsync(newLosses);
+            task.ContinueWith(t => {
+                if (t.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Losses update failed: {t.Exception}");
+                }
+                else if (t.IsCompleted)
+                {
+                    UnityEngine.Debug.Log($"Losses updated to {newLosses} for user {userId}");
+                }
+            });
+        }
+    }
+
+    // New method to increment user wins
+    public void IncrementUserWins()
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            DatabaseReference winsRef = databaseReference.Child("users").Child(userId).Child("wins");
+
+            winsRef.RunTransaction(mutableData => {
+                int currentWins = mutableData.Value != null ? Convert.ToInt32(mutableData.Value) : 0;
+                mutableData.Value = currentWins + 1;
+                return TransactionResult.Success(mutableData);
+            }).ContinueWith(task => {
+                if (task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+                {
+                    UnityEngine.Debug.Log("User wins incremented successfully");
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("Failed to increment user wins: " + task.Exception);
+                }
+            });
+        }
+    }
+
+    // New method to increment user losses
+    public void IncrementUserLosses()
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            DatabaseReference lossesRef = databaseReference.Child("users").Child(userId).Child("losses");
+
+            lossesRef.RunTransaction(mutableData => {
+                int currentLosses = mutableData.Value != null ? Convert.ToInt32(mutableData.Value) : 0;
+                mutableData.Value = currentLosses + 1;
+                return TransactionResult.Success(mutableData);
+            }).ContinueWith(task => {
+                if (task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+                {
+                    UnityEngine.Debug.Log("User losses incremented successfully");
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("Failed to increment user losses: " + task.Exception);
+                }
+            });
+        }
+    }
+
+    // New method to get all user stats
+    public void GetUserStats(Action<UserData> callback)
+    {
+        if (currentUser != null && databaseReference != null)
+        {
+            string userId = currentUser.UserId;
+            databaseReference.Child("users").Child(userId).GetValueAsync().ContinueWith(task => {
+                if (task.IsFaulted)
+                {
+                    // העברת הודעת השגיאה ל-Main Thread
+                    UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                        UnityEngine.Debug.LogError($"Failed to get user stats: {task.Exception}");
+                        callback(null); // Error
+                    });
+                }
+                else if (task.IsCompleted)
+                {
+                    DataSnapshot snapshot = task.Result;
+                    if (snapshot.Exists)
+                    {
+                        try
+                        {
+                            string json = snapshot.GetRawJsonValue();
+                            UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                                try
+                                {
+                                    UserData userData = JsonUtility.FromJson<UserData>(json);
+                                    UnityEngine.Debug.Log($"Retrieved user stats for {userId}: Score={userData.score}, Wins={userData.wins}, Losses={userData.losses}");
+                                    callback(userData);
+                                }
+                                catch (Exception ex)
+                                {
+                                    UnityEngine.Debug.LogError($"Error parsing user data: {ex.Message}");
+                                    callback(null);
+                                }
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            // העברת הודעת השגיאה ל-Main Thread גם כאן
+                            UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                                UnityEngine.Debug.LogError($"Error preparing user data: {ex.Message}");
+                                callback(null);
+                            });
+                        }
+                    }
+                    else
+                    {
+                        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                            UnityEngine.Debug.LogWarning($"No user data found for user {userId}");
+                            callback(null);
+                        });
+                    }
+                }
+            });
+        }
+        else
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => {
+                callback(null);
+            });
+        }
+    }
     #endregion
 }
