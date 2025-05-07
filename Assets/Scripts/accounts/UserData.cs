@@ -1,12 +1,23 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 [Serializable]
 public class UserData
 {
-    public int score;
     public string displayName;
-    public string lastLogin;
+    public string email;
+    public int score;
     public int wins;
     public int losses;
+    public string lastLogin;
+
+    public UserData()
+    {
+        displayName = "";
+        email = "";
+        score = 0;
+        wins = 0;
+        losses = 0;
+        lastLogin = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
 }

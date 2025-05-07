@@ -131,7 +131,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3772714}
-  - component: {fileID: 3772713}
   - component: {fileID: 3772715}
   m_Layer: 0
   m_Name: FirebaseController
@@ -140,30 +139,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &3772713
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3772712}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 817673d8878864945a6c0554b2940faa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  loginPanel: {fileID: 1039637030}
-  signupPanel: {fileID: 987282841}
-  profilePanel: {fileID: 1530018862}
-  loadingPanel: {fileID: 1682184388}
-  loginEmail: {fileID: 1633400862}
-  loginPassword: {fileID: 1691565608}
-  signUpEmail: {fileID: 1856471734}
-  signUpPassword: {fileID: 280302176}
-  signUpName: {fileID: 1884379396}
-  profileUserName_Text: {fileID: 1930912100}
-  profileUserEmail_Text: {fileID: 1779431905}
-  errorText: {fileID: 352704879}
 --- !u!4 &3772714
 Transform:
   m_ObjectHideFlags: 0
@@ -397,7 +372,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -78.772, y: 171}
+  m_AnchoredPosition: {x: -78.772, y: 188.06}
   m_SizeDelta: {x: 96.9218, y: 83.602}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &132620928
@@ -531,7 +506,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 90.549, y: 73.099}
+  m_AnchoredPosition: {x: 90.549, y: 58}
   m_SizeDelta: {x: 111.4696, y: 46.322}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &152365070
@@ -2401,7 +2376,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -36, y: 73.099}
+  m_AnchoredPosition: {x: -36, y: 58}
   m_SizeDelta: {x: 125.6222, y: 46.3227}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &883151769
@@ -6327,7 +6302,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 75.20996, y: 121.26}
+  m_AnchoredPosition: {x: 65.715, y: 113}
   m_SizeDelta: {x: 348.0421, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1850245719
@@ -6982,8 +6957,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 99, y: 171}
-  m_SizeDelta: {x: 264.6882, y: 83.604}
+  m_AnchoredPosition: {x: 170, y: 192.35}
+  m_SizeDelta: {x: 379.9101, y: 75.0236}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1930912099
 CanvasRenderer:

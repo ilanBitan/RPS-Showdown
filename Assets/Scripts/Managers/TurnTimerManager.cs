@@ -12,6 +12,7 @@ public class TurnTimerManager : MonoBehaviour
     private float currentTime;
     private bool timerRunning = false;
     private bool activePhaseStarted = false;
+    private FirebaseDatabaseService dbService;
 
     private void Awake()
     {
@@ -19,6 +20,9 @@ public class TurnTimerManager : MonoBehaviour
             Destroy(gameObject);
         else
             Instance = this;
+
+        // Initialize database service
+        dbService = new FirebaseDatabaseService(FirebaseManager.Instance);
     }
 
     public void ActivateGameTimer()
@@ -56,19 +60,27 @@ public class TurnTimerManager : MonoBehaviour
                 if (TurnManager.Instance.IsPlayerTurn(1)) // Assuming Player 1 is the local player
                 {
                     timerText.text = "YOU WIN";
-                    // עדכון ניצחון וניקוד
-                    FirebaseManager.Instance.IncrementUserWins();
-                    // כדי לעדכן את הניקוד הנוכחי + 10, צריך קודם לקבל את הניקוד הנוכחי
-                    FirebaseManager.Instance.GetUserScore((currentScore) =>
+                    // Get current stats and update them
+                    dbService.GetUserStats((userData) =>
                     {
-                        FirebaseManager.Instance.UpdateUserScore(currentScore + 10);
+                        if (userData != null)
+                        {
+                            dbService.UpdateUserWins(userData.wins + 1);
+                            dbService.UpdateUserScore(userData.score + 10);
+                        }
                     });
                 }
                 else
                 {
                     timerText.text = "YOU LOST";
-                    // עדכון הפסד
-                    FirebaseManager.Instance.IncrementUserLosses();
+                    // Get current stats and update them
+                    dbService.GetUserStats((userData) =>
+                    {
+                        if (userData != null)
+                        {
+                            dbService.UpdateUserLosses(userData.losses + 1);
+                        }
+                    });
                 }
             }
             timerRunning = false; // Stop the timer when the game ends
