@@ -35,6 +35,8 @@ public class FirebaseManager : MonoBehaviour
     private DatabaseReference userDataRef;
     private EventHandler<ValueChangedEventArgs> userDataListener;
 
+    private bool forceLoginOnStart = true;  // תמיד להציג מסך התחברות בהפעלה
+
     // State tracking
     private bool isFirebaseInitialized = false;
     private bool isInitializing = false;
@@ -45,7 +47,10 @@ public class FirebaseManager : MonoBehaviour
     public event Action<bool, string> OnUserAuthenticated;
     public event Action<bool, string> OnUserRegistered;
     public event Action OnUserSignedOut;
-    public event Action<UserData> OnUserDataUpdated; // Added missing event
+    public event Action<UserData> OnUserDataUpdated;
+
+    // חדש: אירוע להודעה שהמשתמש עובר לסצנה אחרת
+    public event Action<string> OnSceneChangeRequested;
 
     private void Awake()
     {
@@ -185,6 +190,11 @@ public class FirebaseManager : MonoBehaviour
     public DatabaseReference DatabaseReference => databaseReference;
 
     #endregion
+    public void RequestSceneChange(string sceneName)
+    {
+        UnityEngine.Debug.Log($"Requesting scene change to: {sceneName}");
+        OnSceneChangeRequested?.Invoke(sceneName);
+    }
 
     #region Authentication Methods
 
@@ -227,8 +237,13 @@ public class FirebaseManager : MonoBehaviour
 
             currentUser = result.User;
             SetupUserDataListener(currentUser.UserId); // Setup listener after successful login
+
+            // מודיע לקוד שההתחברות הצליחה
             callback?.Invoke(true, "Login successful");
             OnUserAuthenticated?.Invoke(true, "Login successful");
+
+            // מבקש מעבר לסצנת התפריט הראשי
+            RequestSceneChange("MainMenuScene");
         });
     }
 

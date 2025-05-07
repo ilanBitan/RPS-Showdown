@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using TMPro;
+using System.Diagnostics;
 
 public class TurnTimerManager : MonoBehaviour
 {
@@ -49,14 +50,28 @@ public class TurnTimerManager : MonoBehaviour
 
         if (PlayerController.gameEnded)
         {
-            // אם המשחק נגמר - להציג הודעה במקום טיימר
+            // אם המשחק נגמר - לעדכן סטטיסטיקות ולשנות את הטקסט
             if (timerText != null)
             {
-                if (TurnManager.Instance.IsPlayerTurn(1))
+                if (TurnManager.Instance.IsPlayerTurn(1)) // Assuming Player 1 is the local player
+                {
                     timerText.text = "YOU WIN";
+                    // עדכון ניצחון וניקוד
+                    FirebaseManager.Instance.IncrementUserWins();
+                    // כדי לעדכן את הניקוד הנוכחי + 10, צריך קודם לקבל את הניקוד הנוכחי
+                    FirebaseManager.Instance.GetUserScore((currentScore) =>
+                    {
+                        FirebaseManager.Instance.UpdateUserScore(currentScore + 10);
+                    });
+                }
                 else
+                {
                     timerText.text = "YOU LOST";
+                    // עדכון הפסד
+                    FirebaseManager.Instance.IncrementUserLosses();
+                }
             }
+            timerRunning = false; // Stop the timer when the game ends
             return;
         }
 
@@ -66,12 +81,10 @@ public class TurnTimerManager : MonoBehaviour
         if (currentTime <= 0f)
         {
             timerRunning = false;
-            Debug.Log("⏰ Time's up! Auto-switching turn...");
+            UnityEngine.Debug.Log("⏰ Time's up! Auto-switching turn...");
             TurnManager.Instance?.EndTurn();
         }
     }
-
-
 
     void UpdateDisplay()
     {

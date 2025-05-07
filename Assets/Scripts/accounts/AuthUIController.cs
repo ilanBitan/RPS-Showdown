@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
@@ -18,6 +19,7 @@ public class AuthUIController : MonoBehaviour
     [Header("Signup Fields")]
     public TMP_InputField signUpEmail;
     public TMP_InputField signUpPassword;
+    public TMP_InputField signUpConfirmPassword;
     public TMP_InputField signUpName;
 
     [Header("Profile Info")]
@@ -29,10 +31,13 @@ public class AuthUIController : MonoBehaviour
     public TextMeshProUGUI errorText;
 
     [Header("Buttons")]
-    public Button refreshStatsButton; // כפתור לרענון הנתונים
+    public Button refreshStatsButton;
 
     // Ensure Firebase events only get handled once by tracking state
     private bool isProcessingAuthentication = false;
+
+    // הוסף משתנה להצגת מסך ההתחברות בהתחלה
+    private bool forceLoginScreen = true;
 
     private void Start()
     {
@@ -41,7 +46,14 @@ public class AuthUIController : MonoBehaviour
         FirebaseManager.Instance.OnUserAuthenticated += HandleUserAuthenticated;
         FirebaseManager.Instance.OnUserRegistered += HandleUserRegistered;
         FirebaseManager.Instance.OnUserSignedOut += HandleUserSignedOut;
-        FirebaseManager.Instance.OnUserDataUpdated += HandleUserDataUpdated; // הרשמה לאירוע העדכון
+        FirebaseManager.Instance.OnUserDataUpdated += HandleUserDataUpdated;
+
+        // הוספת הרשמה לאירוע מעבר סצנה
+        if (FirebaseManager.Instance != null)
+        {
+            // נרשמים לאירוע מעבר סצנה
+            FirebaseManager.Instance.OnSceneChangeRequested += HandleSceneChangeRequested;
+        }
 
         // Show loading panel until Firebase is initialized
         if (loadingPanel != null)
@@ -60,11 +72,16 @@ public class AuthUIController : MonoBehaviour
         {
             UnityEngine.Debug.Log("Firebase already initialized on start");
 
-            // If user is already signed in
-            if (FirebaseManager.Instance.IsUserSignedIn)
+            // גם אם המשתמש מחובר, אם הדגל מופעל אנחנו נראה את מסך ההתחברות
+            if (forceLoginScreen)
+            {
+                UnityEngine.Debug.Log("Forcing login screen display");
+                OpenLoginPanel();
+            }
+            // אחרת, אם המשתמש מחובר אנחנו נציג את מסך הפרופיל
+            else if (FirebaseManager.Instance.IsUserSignedIn)
             {
                 UnityEngine.Debug.Log("Start: User already signed in, showing profile");
-                // לא צריך לקרוא לעדכון נתוני המשתמש כאן כי האזנה תתחיל אוטומטית
                 OpenProfilePanel();
             }
             else
@@ -79,7 +96,6 @@ public class AuthUIController : MonoBehaviour
             // Keep loading panel active until Firebase initializes
         }
 
-        // הוספת אירוע לחיצה על כפתור הרענון אם קיים
         if (refreshStatsButton != null)
         {
             refreshStatsButton.onClick.AddListener(OnRefreshStatsButtonClick);
@@ -95,10 +111,12 @@ public class AuthUIController : MonoBehaviour
             FirebaseManager.Instance.OnUserAuthenticated -= HandleUserAuthenticated;
             FirebaseManager.Instance.OnUserRegistered -= HandleUserRegistered;
             FirebaseManager.Instance.OnUserSignedOut -= HandleUserSignedOut;
-            FirebaseManager.Instance.OnUserDataUpdated -= HandleUserDataUpdated; // ביטול הרשמה לאירוע העדכון
+            FirebaseManager.Instance.OnUserDataUpdated -= HandleUserDataUpdated;
+
+            // ביטול הרשמה לאירוע מעבר סצנה
+            FirebaseManager.Instance.OnSceneChangeRequested -= HandleSceneChangeRequested;
         }
 
-        // הסרת האזנה מכפתור הרענון
         if (refreshStatsButton != null)
         {
             refreshStatsButton.onClick.RemoveListener(OnRefreshStatsButtonClick);
@@ -121,12 +139,17 @@ public class AuthUIController : MonoBehaviour
         }
         else
         {
-            // If user is already signed in
-            if (FirebaseManager.Instance.IsUserSignedIn)
+            // גם אם המשתמש מחובר, אם הדגל מופעל אנחנו נראה את מסך ההתחברות
+            if (forceLoginScreen)
+            {
+                UnityEngine.Debug.Log("Firebase Init: Forcing login screen display");
+                OpenLoginPanel();
+            }
+            // אחרת, אם המשתמש מחובר אנחנו נציג את מסך הפרופיל
+            else if (FirebaseManager.Instance.IsUserSignedIn)
             {
                 UnityEngine.Debug.Log("Firebase Init: User already signed in, showing profile");
                 OpenProfilePanel();
-                // אין צורך לקרוא לעדכון נתוני משתמש כאן שכן מאזין כבר הוגדר ב-FirebaseManager
             }
             else
             {
@@ -140,7 +163,7 @@ public class AuthUIController : MonoBehaviour
     {
         UnityEngine.Debug.Log($"Authentication event: {success}, Message: {message}");
 
-        // Always hide loading panel
+        // תמיד להסתיר את מסך הטעינה אם נקבל תשובה מהשרת (הצלחה או כישלון)
         HideLoadingPanel();
 
         if (success)
@@ -153,16 +176,28 @@ public class AuthUIController : MonoBehaviour
             if (signupPanel != null)
                 signupPanel.SetActive(false);
 
-            // Ensure profile panel is activated
-            OpenProfilePanel();
+            // הקוד הבא לא צריך להתבצע כאן כי השרת יבקש מעבר לסצנה אחרת
+            // OpenProfilePanel();
             ShowNotificationMessage("Success", "Login successful!");
 
-            // מאזין לנתונים כבר הופעל אוטומטית בתוך FirebaseManager
+            // Firebase Manager כבר מטפל במעבר הסצנה
         }
         else
         {
             ShowErrorMessage(message);
         }
+    }
+
+    // טיפול באירוע מעבר סצנה
+    private void HandleSceneChangeRequested(string sceneName)
+    {
+        UnityEngine.Debug.Log($"Scene change requested to: {sceneName}");
+
+        // הפעלת מסך הטעינה לפני מעבר לסצנה אחרת
+        ShowLoadingPanel();
+
+        // מעבר לסצנה המבוקשת עם השהייה קצרה
+        StartCoroutine(LoadSceneWithDelay(sceneName, 0.5f));
     }
 
     private void HandleUserRegistered(bool success, string message)
@@ -185,8 +220,6 @@ public class AuthUIController : MonoBehaviour
             // Ensure profile panel is activated
             OpenProfilePanel();
             ShowNotificationMessage("Success", "Account created successfully!");
-
-            // מאזין לנתונים כבר הופעל אוטומטית בתוך FirebaseManager
         }
         else
         {
@@ -218,12 +251,10 @@ public class AuthUIController : MonoBehaviour
         UnityEngine.Debug.Log("Login panel should now be visible after logout");
     }
 
-    // מטפל בעדכון נתוני המשתמש מהאזנה בזמן אמת
     private void HandleUserDataUpdated(UserData userData)
     {
         UnityEngine.Debug.Log($"Real-time user data updated: Score={userData.score}, Wins={userData.wins}, Losses={userData.losses}");
 
-        // עדכון התצוגה בממשק המשתמש
         if (profileScore_Text != null)
             profileScore_Text.text = userData.score.ToString();
 
@@ -233,7 +264,6 @@ public class AuthUIController : MonoBehaviour
         if (profileLosses_Text != null)
             profileLosses_Text.text = userData.losses.ToString();
 
-        // עדכון שם תצוגה אם הוא קיים בנתונים
         if (!string.IsNullOrEmpty(userData.displayName) && profileUserName_Text != null)
             profileUserName_Text.text = userData.displayName;
     }
@@ -306,7 +336,6 @@ public class AuthUIController : MonoBehaviour
             profilePanel.SetActive(true);
             UnityEngine.Debug.Log("Profile panel activated");
 
-            // עדכון האימייל וה-DisplayName מידית
             UpdateProfileInfo();
         }
         else
@@ -315,7 +344,6 @@ public class AuthUIController : MonoBehaviour
         }
     }
 
-    // נקודה אחת לרענון נתוני משתמש
     private void UpdateProfileInfo()
     {
         UnityEngine.Debug.Log("Updating profile information");
@@ -373,10 +401,8 @@ public class AuthUIController : MonoBehaviour
                 if (success)
                 {
                     UnityEngine.Debug.Log("Direct callback: Login successful");
-
-                    // In case the event system fails, also handle UI changes here
-                    HideLoadingPanel();
-                    OpenProfilePanel();
+                    // מסך הטעינה יישאר מוצג עד למעבר לסצנה הבאה
+                    // FirebaseManager יטפל במעבר לסצנה הבאה
                 }
                 else
                 {
@@ -390,7 +416,8 @@ public class AuthUIController : MonoBehaviour
     public void OnSignUpButtonClick()
     {
         // Validate input
-        if (string.IsNullOrEmpty(signUpEmail.text) || string.IsNullOrEmpty(signUpPassword.text) || string.IsNullOrEmpty(signUpName.text))
+        if (string.IsNullOrEmpty(signUpEmail.text) || string.IsNullOrEmpty(signUpPassword.text) ||
+            string.IsNullOrEmpty(signUpName.text) || string.IsNullOrEmpty(signUpConfirmPassword.text))
         {
             ShowErrorMessage("Please fill all fields");
             return;
@@ -400,6 +427,13 @@ public class AuthUIController : MonoBehaviour
         if (signUpPassword.text.Length < 6)
         {
             ShowErrorMessage("Password must be at least 6 characters");
+            return;
+        }
+
+        // בדיקה שהסיסמאות זהות
+        if (signUpPassword.text != signUpConfirmPassword.text)
+        {
+            ShowErrorMessage("Passwords do not match");
             return;
         }
 
@@ -458,7 +492,6 @@ public class AuthUIController : MonoBehaviour
         OpenLoginPanel();
     }
 
-    // כפתור חדש לרענון ידני של נתוני המשתמש מהשרת
     public void OnRefreshStatsButtonClick()
     {
         UnityEngine.Debug.Log("Manual refresh of user stats requested");
@@ -466,18 +499,15 @@ public class AuthUIController : MonoBehaviour
         {
             ShowLoadingPanel();
             FirebaseManager.Instance.ForceRefreshUserStats();
-            StartCoroutine(HideLoadingAfterDelay(0.5f)); // מסתיר את טעינה אחרי חצי שנייה
+            StartCoroutine(HideLoadingAfterDelay(0.5f));
         }
     }
-
-    // New methods to handle game statistics updates
 
     public void UpdatePlayerScore(int newScore)
     {
         if (FirebaseManager.Instance.IsUserSignedIn)
         {
             FirebaseManager.Instance.UpdateUserScore(newScore);
-            // אין צורך לעדכן את הממשק כאן, זה יקרה אוטומטית דרך המאזין
         }
     }
 
@@ -488,7 +518,6 @@ public class AuthUIController : MonoBehaviour
             int currentScore = int.Parse(profileScore_Text.text);
             int newScore = currentScore + amount;
             FirebaseManager.Instance.UpdateUserScore(newScore);
-            // אין צורך לעדכן את הממשק כאן, זה יקרה אוטומטית דרך המאזין
         }
     }
 
@@ -497,7 +526,6 @@ public class AuthUIController : MonoBehaviour
         if (FirebaseManager.Instance.IsUserSignedIn)
         {
             FirebaseManager.Instance.IncrementUserWins();
-            // אין צורך לעדכן את הממשק כאן, זה יקרה אוטומטית דרך המאזין
         }
     }
 
@@ -506,7 +534,6 @@ public class AuthUIController : MonoBehaviour
         if (FirebaseManager.Instance.IsUserSignedIn)
         {
             FirebaseManager.Instance.IncrementUserLosses();
-            // אין צורך לעדכן את הממשק כאן, זה יקרה אוטומטית דרך המאזין
         }
     }
 
@@ -537,10 +564,6 @@ public class AuthUIController : MonoBehaviour
     {
         UnityEngine.Debug.Log($"{title}: {message}");
 
-        // Example of how to show a notification
-        // UIManager.Instance.ShowNotification(title, message);
-
-        // For now, just update the error text with success message
         if (errorText != null)
         {
             errorText.text = $"{title}: {message}";
@@ -566,11 +589,23 @@ public class AuthUIController : MonoBehaviour
         }
     }
 
-    // קורוטינה לטפל בהסתרת פאנל הטעינה אחרי השהיה קצרה
     private IEnumerator HideLoadingAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
         HideLoadingPanel();
+    }
+
+    // קורוטינה חדשה למעבר לסצנה עם השהייה ומסך טעינה
+    private IEnumerator LoadSceneWithDelay(string sceneName, float delay)
+    {
+        // הפעלת מסך הטעינה
+        ShowLoadingPanel();
+
+        // המתנה לפרק זמן מוגדר
+        yield return new WaitForSeconds(delay);
+
+        // הפעלת מעבר לסצנה החדשה
+        SceneManager.LoadScene(sceneName);
     }
 
     #endregion
