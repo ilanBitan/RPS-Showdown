@@ -56,7 +56,7 @@ public class AIPlayerController : MonoBehaviour
 
         Vector2Int[] directions = new Vector2Int[]
         {
-        Vector2Int.down, Vector2Int.left, Vector2Int.right, Vector2Int.up
+            Vector2Int.down, Vector2Int.left, Vector2Int.right, Vector2Int.up
         };
 
         foreach (var unit in movableUnits)
@@ -78,13 +78,12 @@ public class AIPlayerController : MonoBehaviour
 
                 if (targetUnit == null)
                 {
-                    if (unit.TryMove(dir))
-                    {
-                        yield return new WaitForSeconds(0.3f);
-                        TurnManager.Instance?.EndTurn();
-                        yield break;
-                    }
-                    continue;
+                    Debug.Log($"🤖 AI moving unit to empty tile {target}");
+                    // Use the RPSUnit's MoveTo method which now has animation built in
+                    unit.MoveTo(target);
+                    yield return new WaitForSeconds(0.6f); // Wait for animation to complete
+                    TurnManager.Instance?.EndTurn();
+                    yield break;
                 }
 
                 if (targetUnit.playerId == unit.playerId)
@@ -116,10 +115,10 @@ public class AIPlayerController : MonoBehaviour
                     Debug.Log("🎯 AI captured the FLAG!");
                     BoardManager.Instance.RemoveUnit(enemy);
                     Destroy(enemy.gameObject);
-                    BoardManager.Instance.PlaceUnit(unit, target);
+                    // Use unit.MoveTo which now includes animation
                     unit.MoveTo(target);
 
-                    PlayerController.gameEnded = true;
+                    PlayerController.gameEnded = true; // ❗ נעילת המשחק אחרי תפיסת דגל
                     yield break;
                 }
 
@@ -142,9 +141,10 @@ public class AIPlayerController : MonoBehaviour
 
                     BoardManager.Instance.RemoveUnit(enemy);
                     Destroy(enemy.gameObject);
-                    BoardManager.Instance.PlaceUnit(unit, target);
+                    // Use unit.MoveTo which now includes animation
                     unit.MoveTo(target);
 
+                    yield return new WaitForSeconds(0.6f); // Wait for animation to complete
                     TurnManager.Instance?.EndTurn();
                     yield break;
                 }
@@ -265,3 +265,4 @@ public class AIPlayerController : MonoBehaviour
 
 
 }
+

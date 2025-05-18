@@ -45,7 +45,7 @@ public class PlayerController : MonoBehaviour
 
         if (direction != Vector2Int.zero)
         {
-            TryMoveUnit(selectedUnit, direction);
+            StartCoroutine(HandleJumpAndMove(selectedUnit, direction));
         }
     }
 
@@ -82,6 +82,23 @@ public class PlayerController : MonoBehaviour
         if (activeOutline != null)
             Destroy(activeOutline);
         selectedUnit = null;
+    }
+
+    System.Collections.IEnumerator HandleJumpAndMove(RPSUnit unit, Vector2Int dir)
+    {
+        // Trigger jump animation
+        Animator anim = unit.GetComponent<Animator>();
+        if (anim != null)
+        {
+    anim.SetInteger("playerId", unit.playerId); // 1 for player, 2 for enemy
+    anim.ResetTrigger("jump");
+    anim.SetTrigger("jump");
+        }
+
+        // Wait a short time to allow jump animation to show
+        yield return new WaitForSeconds(0.2f);
+
+        TryMoveUnit(unit, dir);
     }
 
     void TryMoveUnit(RPSUnit unit, Vector2Int dir)
@@ -134,6 +151,18 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
+                // 🏁 FLAG
+                if (other.role == RPSUnit.UnitRole.Flag)
+                {
+                    Debug.Log("🎉 You captured the enemy FLAG! YOU WIN!");
+                    Destroy(other.gameObject);
+                    MoveUnitTo(unit, target);
+                    ClearSelection();
+                    Debug.Log($"🏆 Player {myPlayerId} wins the game!");
+                    return;
+                }
+
+                // 🔁 RPS Battle
                 if (unit.Kind == other.Kind)
                 {
                     Debug.Log("⚔️ Equal kinds – entering RPS battle mode!");
@@ -167,19 +196,45 @@ public class PlayerController : MonoBehaviour
         TurnManager.Instance?.EndTurn();
     }
 
-    void MoveUnitTo(RPSUnit unit, Vector2Int target)
+void MoveUnitTo(RPSUnit unit, Vector2Int target)
+{
+    Transform targetTile = GetTileTransform(target);
+    if (targetTile != null)
     {
-        Transform targetTile = GetTileTransform(target);
-        if (targetTile != null)
-        {
-            unit.transform.SetParent(targetTile, false);
-            RectTransform rt = unit.GetComponent<RectTransform>();
-            rt.anchoredPosition = Vector2.zero;
-            unit.Position = target;
-            BoardManager.Instance.PlaceUnit(unit, target);
-            Debug.Log($"✅ Unit moved to [col {target.x}, row {target.y}]");
-        }
+        StartCoroutine(SmoothMove(unit, targetTile, target));
     }
+}
+System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Vector2Int targetGridPos)
+{
+    RectTransform rt = unit.GetComponent<RectTransform>();
+    if (rt == null) yield break;
+
+    Vector3 start = rt.position;
+    Vector3 end = targetTile.position;
+
+    float elapsed = 0f;
+    float duration = 0.25f; // smooth time (adjust as needed)
+
+    while (elapsed < duration)
+    {
+        rt.position = Vector3.Lerp(start, end, elapsed / duration);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    // Snap to final position
+    rt.position = end;
+
+    // Update hierarchy and grid data
+    unit.transform.SetParent(targetTile, false);
+    rt.anchoredPosition = Vector2.zero;
+    unit.Position = targetGridPos;
+    BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
+
+
+    Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+}
+
 
     Transform GetTileTransform(Vector2Int pos)
     {

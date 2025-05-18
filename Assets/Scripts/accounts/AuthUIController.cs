@@ -1,0 +1,424 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using TMPro;
+using UnityEngine.UI;
+using System.Collections;
+
+public class AuthUIController : MonoBehaviour
+{
+    [Header("Panels")]
+    public GameObject loginPanel;
+    public GameObject signupPanel;
+    public GameObject profilePanel;
+    public GameObject loadingPanel;
+
+    [Header("Login Fields")]
+    public TMP_InputField loginEmail;
+    public TMP_InputField loginPassword;
+
+    [Header("Signup Fields")]
+    public TMP_InputField signUpEmail;
+    public TMP_InputField signUpPassword;
+    public TMP_InputField signUpConfirmPassword;
+    public TMP_InputField signUpName;
+
+    [Header("Profile Info")]
+    public TextMeshProUGUI profileUserName_Text;
+    public TextMeshProUGUI profileUserEmail_Text;
+    public TextMeshProUGUI profileScore_Text;
+    public TextMeshProUGUI profileWins_Text;
+    public TextMeshProUGUI profileLosses_Text;
+    public TextMeshProUGUI errorText;
+
+    [Header("Buttons")]
+    public Button refreshStatsButton;
+
+    // Services
+    private FirebaseAuthService authService;
+    private FirebaseDatabaseService dbService;
+
+    // Ensure Firebase events only get handled once by tracking state
+    private bool isProcessingAuthentication = false;
+    private bool forceLoginScreen = true;
+
+    private void Start()
+    {
+        // Initialize services
+        authService = new FirebaseAuthService(FirebaseManager.Instance);
+        dbService = new FirebaseDatabaseService(FirebaseManager.Instance);
+
+        // Subscribe to events
+        FirebaseManager.Instance.OnFirebaseInitialized += HandleFirebaseInitialized;
+        authService.OnUserAuthenticated += HandleUserAuthenticated;
+        authService.OnUserRegistered += HandleUserRegistered;
+        authService.OnUserSignedOut += HandleUserSignedOut;
+        dbService.OnUserDataUpdated += HandleUserDataUpdated;
+        FirebaseManager.Instance.OnSceneChangeRequested += HandleSceneChangeRequested;
+
+        // Show loading panel until Firebase is initialized
+        if (loadingPanel != null)
+            loadingPanel.SetActive(true);
+
+        // Hide all other panels initially
+        if (loginPanel != null)
+            loginPanel.SetActive(false);
+        if (signupPanel != null)
+            signupPanel.SetActive(false);
+        if (profilePanel != null)
+            profilePanel.SetActive(false);
+
+        // Check if Firebase is already initialized
+        if (FirebaseManager.Instance.IsInitialized)
+        {
+            UnityEngine.Debug.Log("Firebase already initialized on start");
+
+            if (forceLoginScreen)
+            {
+                UnityEngine.Debug.Log("Forcing login screen display");
+                OpenLoginPanel();
+            }
+            else if (FirebaseManager.Instance.IsUserSignedIn)
+            {
+                UnityEngine.Debug.Log("Start: User already signed in, showing profile");
+                OpenProfilePanel();
+            }
+            else
+            {
+                UnityEngine.Debug.Log("Start: Firebase initialized but no user, showing login");
+                OpenLoginPanel();
+            }
+        }
+        else
+        {
+            UnityEngine.Debug.Log("Start: Waiting for Firebase initialization...");
+        }
+
+        if (refreshStatsButton != null)
+        {
+            refreshStatsButton.onClick.AddListener(OnRefreshStatsButtonClick);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from events
+        if (FirebaseManager.Instance != null)
+        {
+            FirebaseManager.Instance.OnFirebaseInitialized -= HandleFirebaseInitialized;
+            FirebaseManager.Instance.OnSceneChangeRequested -= HandleSceneChangeRequested;
+        }
+
+        if (authService != null)
+        {
+            authService.OnUserAuthenticated -= HandleUserAuthenticated;
+            authService.OnUserRegistered -= HandleUserRegistered;
+            authService.OnUserSignedOut -= HandleUserSignedOut;
+        }
+
+        if (dbService != null)
+        {
+            dbService.OnUserDataUpdated -= HandleUserDataUpdated;
+        }
+
+        if (refreshStatsButton != null)
+        {
+            refreshStatsButton.onClick.RemoveListener(OnRefreshStatsButtonClick);
+        }
+    }
+
+    #region Event Handlers
+
+    private void HandleFirebaseInitialized(bool success, string message)
+    {
+        UnityEngine.Debug.Log($"Firebase initialized: {success}, Message: {message}");
+        HideLoadingPanel();
+
+        if (!success)
+        {
+            ShowErrorMessage("Firebase initialization failed: " + message);
+            OpenLoginPanel();
+        }
+        else
+        {
+            if (forceLoginScreen)
+            {
+                OpenLoginPanel();
+            }
+            else if (FirebaseManager.Instance.IsUserSignedIn)
+            {
+                OpenProfilePanel();
+            }
+            else
+            {
+                OpenLoginPanel();
+            }
+        }
+    }
+
+    private void HandleUserAuthenticated(bool success, string message)
+    {
+        UnityEngine.Debug.Log($"Authentication event: {success}, Message: {message}");
+        HideLoadingPanel();
+
+        if (success)
+        {
+            ShowNotificationMessage("Success", "Login successful!");
+        }
+        else
+        {
+            ShowErrorMessage(message);
+        }
+    }
+
+    private void HandleSceneChangeRequested(string sceneName)
+    {
+        UnityEngine.Debug.Log($"Scene change requested to: {sceneName}");
+        ShowLoadingPanel();
+        StartCoroutine(LoadSceneWithDelay(sceneName, 0.5f));
+    }
+
+    private void HandleUserRegistered(bool success, string message)
+    {
+        UnityEngine.Debug.Log($"Registration event: {success}, Message: {message}");
+        HideLoadingPanel();
+
+        if (success)
+        {
+            OpenProfilePanel();
+            ShowNotificationMessage("Success", "Account created successfully!");
+        }
+        else
+        {
+            ShowErrorMessage(message);
+        }
+    }
+
+    private void HandleUserSignedOut()
+    {
+        UnityEngine.Debug.Log("User signed out event received");
+        ClearProfileInfo();
+        OpenLoginPanel();
+    }
+
+    private void HandleUserDataUpdated(UserData userData)
+    {
+        if (userData != null)
+        {
+            UpdateProfileInfo(userData);
+        }
+    }
+
+    #endregion
+
+    #region UI Methods
+
+    public void OpenLoginPanel()
+    {
+        loginPanel.SetActive(true);
+        signupPanel.SetActive(false);
+        profilePanel.SetActive(false);
+        loadingPanel?.SetActive(false);
+        ClearErrorMessage();
+    }
+
+    public void OpenSignUpPanel()
+    {
+        loginPanel.SetActive(false);
+        signupPanel.SetActive(true);
+        profilePanel.SetActive(false);
+        loadingPanel?.SetActive(false);
+        ClearErrorMessage();
+    }
+
+    public void OpenProfilePanel()
+    {
+        loginPanel.SetActive(false);
+        signupPanel.SetActive(false);
+        profilePanel.SetActive(true);
+        loadingPanel?.SetActive(false);
+        UpdateProfileInfo();
+    }
+
+    private void UpdateProfileInfo(UserData userData = null)
+    {
+        if (userData != null)
+        {
+            UnityEngine.Debug.Log($"Updating profile info for user: {userData.displayName}, Email: {userData.email}, Score: {userData.score}, Wins: {userData.wins}, Losses: {userData.losses}");
+
+            if (profileUserName_Text != null)
+                profileUserName_Text.text = userData.displayName;
+            if (profileUserEmail_Text != null)
+                profileUserEmail_Text.text = userData.email;
+            if (profileScore_Text != null)
+                profileScore_Text.text = userData.score.ToString();
+            if (profileWins_Text != null)
+                profileWins_Text.text = userData.wins.ToString();
+            if (profileLosses_Text != null)
+                profileLosses_Text.text = userData.losses.ToString();
+        }
+        else
+        {
+            UnityEngine.Debug.Log("No user data provided, fetching from database...");
+            dbService.GetUserStats((data) => {
+                if (data == null)
+                {
+                    UnityEngine.Debug.LogError("Failed to get user stats from database");
+                    return;
+                }
+                UpdateProfileInfo(data);
+            });
+        }
+    }
+
+    #endregion
+
+    #region Button Handlers
+
+    public void OnLoginButtonClick()
+    {
+        if (isProcessingAuthentication) return;
+
+        if (string.IsNullOrEmpty(loginEmail.text) || string.IsNullOrEmpty(loginPassword.text))
+        {
+            ShowErrorMessage("Please enter email and password");
+            return;
+        }
+
+        isProcessingAuthentication = true;
+        ShowLoadingPanel();
+
+        authService.SignInWithEmailPassword(loginEmail.text, loginPassword.text, (success, message) => {
+            isProcessingAuthentication = false;
+            if (success)
+            {
+                // Request scene change to MainMenuScene after successful login
+                FirebaseManager.Instance.RequestSceneChange("MainMenuScene");
+
+               // OpenProfilePanel();
+            }
+        });
+    }
+
+    public void OnSignUpButtonClick()
+    {
+        if (isProcessingAuthentication) return;
+
+        if (string.IsNullOrEmpty(signUpEmail.text) || string.IsNullOrEmpty(signUpPassword.text) ||
+            string.IsNullOrEmpty(signUpName.text))
+        {
+            ShowErrorMessage("Please fill all fields");
+            return;
+        }
+
+        if (signUpPassword.text != signUpConfirmPassword.text)
+        {
+            ShowErrorMessage("Passwords do not match");
+            return;
+        }
+
+        if (signUpPassword.text.Length < 6)
+        {
+            ShowErrorMessage("Password must be at least 6 characters");
+            return;
+        }
+
+        isProcessingAuthentication = true;
+        ShowLoadingPanel();
+
+        authService.CreateUserWithEmailPassword(signUpEmail.text, signUpPassword.text, signUpName.text,
+            (success, message) => {
+                isProcessingAuthentication = false;
+                if (success)
+                {
+                    // Initialize user data in database
+                    dbService.InitializeUserData(FirebaseManager.Instance.CurrentUser.UserId, signUpName.text);
+
+                    // Wait a moment for the data to be saved
+                    StartCoroutine(WaitForUserData());
+                }
+                else
+                {
+                    ShowErrorMessage(message);
+                }
+            });
+    }
+
+    private IEnumerator WaitForUserData()
+    {
+        yield return new WaitForSeconds(1f); // Wait for 1 second
+        OpenProfilePanel();
+    }
+
+    public void OnLogOutButtonClick()
+    {
+        authService.SignOut();
+    }
+
+    public void OnRefreshStatsButtonClick()
+    {
+        UpdateProfileInfo();
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private void ClearProfileInfo()
+    {
+        if (profileUserName_Text != null)
+            profileUserName_Text.text = "";
+        if (profileUserEmail_Text != null)
+            profileUserEmail_Text.text = "";
+        if (profileScore_Text != null)
+            profileScore_Text.text = "0";
+        if (profileWins_Text != null)
+            profileWins_Text.text = "0";
+        if (profileLosses_Text != null)
+            profileLosses_Text.text = "0";
+        ClearErrorMessage();
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        if (errorText != null)
+        {
+            errorText.text = message;
+            errorText.gameObject.SetActive(true);
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        if (errorText != null)
+        {
+            errorText.text = "";
+            errorText.gameObject.SetActive(false);
+        }
+    }
+
+    private void ShowNotificationMessage(string title, string message)
+    {
+        // Implement your notification system here
+        UnityEngine.Debug.Log($"{title}: {message}");
+    }
+
+    private void ShowLoadingPanel()
+    {
+        if (loadingPanel != null)
+            loadingPanel.SetActive(true);
+    }
+
+    private void HideLoadingPanel()
+    {
+        if (loadingPanel != null)
+            loadingPanel.SetActive(false);
+    }
+
+    private IEnumerator LoadSceneWithDelay(string sceneName, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(sceneName);
+    }
+
+    #endregion
+}
