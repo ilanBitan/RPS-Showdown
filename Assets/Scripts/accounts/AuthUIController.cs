@@ -291,7 +291,10 @@ public class AuthUIController : MonoBehaviour
             isProcessingAuthentication = false;
             if (success)
             {
-                OpenProfilePanel();
+                // Request scene change to MainMenuScene after successful login
+                FirebaseManager.Instance.RequestSceneChange("MainMenuScene");
+
+               // OpenProfilePanel();
             }
         });
     }
