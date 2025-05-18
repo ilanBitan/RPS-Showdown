@@ -13,6 +13,17 @@ public class PlayerController : MonoBehaviour
 
     public static bool gameEnded = false; // 🛡️ משתנה שמנהל סיום משחק
 
+    // ✅ מאפיין לקריאה חיצונית
+    public RPSUnit SelectedUnit => selectedUnit;
+
+    // ✅ מתודת עזר להזזת היחידה הנבחרת
+    public void TryMoveSelectedUnit(Vector2Int direction)
+    {
+        if (selectedUnit != null)
+        {
+            TryMoveUnit(selectedUnit, direction);
+        }
+    }
 
     void Update()
     {
@@ -112,7 +123,6 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
-                // 🏁 FLAG - תפיסת דגל
                 if (other.role == RPSUnit.UnitRole.Flag)
                 {
                     Debug.Log("🎯 You captured the enemy FLAG!");
@@ -121,7 +131,7 @@ public class PlayerController : MonoBehaviour
                     MoveUnitTo(unit, target);
                     Destroy(other.gameObject);
                     ClearSelection();
-                    gameEnded = true; // ❗❗ המשחק ננעל
+                    gameEnded = true;
                     if (playAgainContainer != null)
                     {
                         playAgainContainer.SetActive(true);
@@ -130,7 +140,6 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
-                // 💣 TRAP - מלכודת
                 if (other.role == RPSUnit.UnitRole.Trap)
                 {
                     Debug.Log("💥 Trap triggered! Attacker destroyed.");
@@ -161,7 +170,6 @@ public class PlayerController : MonoBehaviour
                     return;
                 }
 
-                // ✅ קרב רגיל
                 unit.Reveal();
                 other.Reveal();
 
@@ -183,7 +191,6 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // אין יריב - תזוזה רגילה
         MoveUnitTo(unit, target);
         ClearSelection();
         TurnManager.Instance?.EndTurn();
@@ -236,42 +243,63 @@ System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Ve
         if (board == null || index >= board.childCount) return null;
         return board.GetChild(index);
     }
+
     public void OnPlayAgainButtonClicked()
     {
-        // אפס הכל לפני טעינה
         PlayerController.gameEnded = false;
 
-        // תאפס את הטיימר אם יש
         TurnTimerManager timer = FindObjectOfType<TurnTimerManager>();
-        if (timer != null)
-        {
-            Destroy(timer.gameObject);
-        }
+        if (timer != null) Destroy(timer.gameObject);
 
-        // תאפס את ה-AI אם יש
         AIPlayerController ai = FindObjectOfType<AIPlayerController>();
-        if (ai != null)
-        {
-            Destroy(ai.gameObject);
-        }
+        if (ai != null) Destroy(ai.gameObject);
 
-        // תאפס את ה-TurnManager אם יש
         TurnManager tm = FindObjectOfType<TurnManager>();
-        if (tm != null)
-        {
-            Destroy(tm.gameObject);
-        }
+        if (tm != null) Destroy(tm.gameObject);
 
-        // תאפס את ה-BoardManager אם יש
         BoardManager bm = FindObjectOfType<BoardManager>();
-        if (bm != null)
-        {
-            Destroy(bm.gameObject);
-        }
+        if (bm != null) Destroy(bm.gameObject);
 
-        // ואז טען מחדש את הסצנה
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    public void OnTileTapped(Vector2Int tilePos)
+    {
+        if (selectedUnit == null)
+        {
+            Debug.Log("❌ No unit selected.");
+            return;
+        }
 
+        if (!selectedUnit.IsMovable())
+        {
+            Debug.Log("⛔ Selected unit cannot move.");
+            return;
+        }
+
+        if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive())
+        {
+            Debug.Log("⚔️ Battle in progress – cannot move now.");
+            return;
+        }
+
+        if (TurnManager.Instance == null || !TurnManager.Instance.IsPlayerTurn(myPlayerId))
+        {
+            Debug.Log("⏳ Not your turn.");
+            return;
+        }
+
+        Vector2Int direction = tilePos - selectedUnit.Position;
+        Debug.Log($"📍 Tile tapped at {tilePos}, selected unit at {selectedUnit.Position}, direction {direction}");
+
+        if (Mathf.Abs(direction.x) + Mathf.Abs(direction.y) == 1)
+        {
+            Debug.Log("✅ Valid move. Trying to move unit...");
+            TryMoveUnit(selectedUnit, direction);
+        }
+        else
+        {
+            Debug.Log("🚫 Invalid move – must move one tile only.");
+        }
+    }
 }
