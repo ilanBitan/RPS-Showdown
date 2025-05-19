@@ -1,5 +1,6 @@
-﻿
+﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
 using static RPSUnit;
@@ -33,8 +34,8 @@ public class BattleManager : MonoBehaviour
 
     public void StartBattle(RPSUnit initiator, RPSUnit opponent, Vector2Int target)
     {
-     //   if (GameEndHandler.gameEnded)
-      //      return;
+        //   if (GameEndHandler.gameEnded)
+        //      return;
 
         isPlayerInitiator = initiator.IsPlayerControlled;
 
@@ -72,9 +73,13 @@ public class BattleManager : MonoBehaviour
     private void OnPlayerChoice(RPSUnit.RPSKind choice)
     {
         playerChoice = choice;
-        aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
+        aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
 
-        Debug.Log($"⚔️ Battle initiated! Player chose {playerChoice}, AI chose {aiChoice}");
+        UnityEngine.Debug.Log($"⚔️ Battle initiated! Player chose {playerChoice}, AI chose {aiChoice}");
+
+        // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+        FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+
         ResolveBattle();
     }
 
@@ -103,27 +108,27 @@ public class BattleManager : MonoBehaviour
         }
         if (aiUnit.role == RPSUnit.UnitRole.Flag)
         {
-         //   FindObjectOfType<GameEndHandler>().ShowVictory("Player 1");
+            //   FindObjectOfType<GameEndHandler>().ShowVictory("Player 1");
             return;
         }
 
         if (playerWins)
         {
-            Debug.Log("✅ Player wins the battle!");
+            UnityEngine.Debug.Log("✅ Player wins the battle!");
 
             Destroy(aiUnit.gameObject);
             playerUnit.MoveTo(targetPos);
         }
         else if (aiWins)
         {
-            Debug.Log("❌ AI wins the battle!");
+            UnityEngine.Debug.Log("❌ AI wins the battle!");
 
             Destroy(playerUnit.gameObject);
             aiUnit.MoveTo(targetPos);
         }
         else
         {
-            Debug.Log("🤝 Tie – rematch round!");
+            UnityEngine.Debug.Log("🤝 Tie – rematch round!");
             Invoke(nameof(ShowPlayerPanel), 0.5f);
             return;
         }

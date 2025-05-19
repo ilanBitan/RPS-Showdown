@@ -13,6 +13,12 @@ public class GameMenuManager : MonoBehaviour
         }
     }
 
+    public void OnSettingsPressed()
+    {
+        // נעבור לסצנת הפרופיל
+        SceneManager.LoadScene("LoginScene");
+    }
+
     public void OnEasyPressed()
     {
         GameModeManager.Instance.SelectEasy();

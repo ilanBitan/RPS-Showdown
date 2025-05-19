@@ -39,7 +39,7 @@ public class AuthUIController : MonoBehaviour
 
     // Ensure Firebase events only get handled once by tracking state
     private bool isProcessingAuthentication = false;
-    private bool forceLoginScreen = true;
+    private bool forceLoginScreen = false;
 
     private void Start()
     {
@@ -163,10 +163,31 @@ public class AuthUIController : MonoBehaviour
         if (success)
         {
             ShowNotificationMessage("Success", "Login successful!");
+            // Request scene change to MainMenuScene after successful login
+            FirebaseManager.Instance.RequestSceneChange("MainMenuScene");
         }
         else
         {
-            ShowErrorMessage(message);
+            // Display specific error message based on error type
+            string errorMessage = message;
+            if (message.Contains("Invalid email"))
+            {
+                errorMessage = "Invalid email address";
+            }
+            else if (message.Contains("Invalid password"))
+            {
+                errorMessage = "Incorrect password";
+            }
+            else if (message.Contains("User not found"))
+            {
+                errorMessage = "User not found in the system";
+            }
+            else if (message.Contains("Too many attempts"))
+            {
+                errorMessage = "Too many login attempts. Please try again later";
+            }
+
+            ShowErrorMessage(errorMessage);
         }
     }
 
@@ -294,7 +315,7 @@ public class AuthUIController : MonoBehaviour
                 // Request scene change to MainMenuScene after successful login
                 FirebaseManager.Instance.RequestSceneChange("MainMenuScene");
 
-               // OpenProfilePanel();
+                // OpenProfilePanel();
             }
         });
     }
@@ -346,7 +367,7 @@ public class AuthUIController : MonoBehaviour
     private IEnumerator WaitForUserData()
     {
         yield return new WaitForSeconds(1f); // Wait for 1 second
-        OpenProfilePanel();
+        OpenLoginPanel();
     }
 
     public void OnLogOutButtonClick()

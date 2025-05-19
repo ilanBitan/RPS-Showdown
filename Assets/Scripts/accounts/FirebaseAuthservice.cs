@@ -144,29 +144,34 @@ public class FirebaseAuthService
                     {
                         UnityEngine.Debug.LogError($"Firebase error code: {firebaseEx.ErrorCode}, Message: {firebaseEx.Message}");
 
-                        switch (firebaseEx.ErrorCode)
+                        // Check for specific error messages in the exception message
+                        if (firebaseEx.Message.Contains("INVALID_LOGIN_CREDENTIALS"))
                         {
-                            case -6: // ERROR_WEAK_PASSWORD
-                                errorMessage = "Password is too weak";
-                                break;
-                            case -5: // ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL
-                                errorMessage = "An account already exists with this email";
-                                break;
-                            case -17: // ERROR_USER_NOT_FOUND
-                                errorMessage = "User not found";
-                                break;
-                            case -16: // ERROR_INVALID_EMAIL
-                                errorMessage = "Invalid email format";
-                                break;
-                            case -14: // ERROR_WRONG_PASSWORD
-                                errorMessage = "Incorrect password";
-                                break;
-                            case -9: // ERROR_EMAIL_ALREADY_IN_USE
-                                errorMessage = "Email is already in use";
-                                break;
-                            default:
-                                errorMessage = firebaseEx.Message;
-                                break;
+                            errorMessage = "Invalid email or password";
+                        }
+                        else if (firebaseEx.Message.Contains("USER_NOT_FOUND"))
+                        {
+                            errorMessage = "User not found";
+                        }
+                        else if (firebaseEx.Message.Contains("INVALID_EMAIL"))
+                        {
+                            errorMessage = "Invalid email format";
+                        }
+                        else if (firebaseEx.Message.Contains("WEAK_PASSWORD"))
+                        {
+                            errorMessage = "Password is too weak";
+                        }
+                        else if (firebaseEx.Message.Contains("EMAIL_ALREADY_IN_USE"))
+                        {
+                            errorMessage = "Email is already in use";
+                        }
+                        else if (firebaseEx.Message.Contains("TOO_MANY_ATTEMPTS_TRY_LATER"))
+                        {
+                            errorMessage = "Too many login attempts. Please try again later";
+                        }
+                        else
+                        {
+                            errorMessage = "Authentication failed. Please check your credentials and try again";
                         }
                         break;
                     }
@@ -174,7 +179,7 @@ public class FirebaseAuthService
             }
             else
             {
-                errorMessage = exception.Message;
+                errorMessage = "Authentication failed. Please try again";
             }
         }
 

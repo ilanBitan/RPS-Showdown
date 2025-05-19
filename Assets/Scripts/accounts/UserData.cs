@@ -10,6 +10,9 @@ public class UserData
     public int wins;
     public int losses;
     public string lastLogin;
+    public int rockChoices;    // מספר פעמים שבחר אבן בתיקו
+    public int paperChoices;   // מספר פעמים שבחר נייר בתיקו
+    public int scissorsChoices; // מספר פעמים שבחר מספריים בתיקו
 
     public UserData()
     {

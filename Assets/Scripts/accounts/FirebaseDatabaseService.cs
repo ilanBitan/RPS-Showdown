@@ -154,6 +154,48 @@ public class FirebaseDatabaseService
             });
     }
 
+    public void UpdateRPSChoice(RPSUnit.RPSKind choice)
+    {
+        if (!firebaseManager.IsInitialized || firebaseManager.CurrentUser == null)
+        {
+            UnityEngine.Debug.LogError("Firebase is not initialized or no user is signed in");
+            return;
+        }
+
+        string fieldName = choice switch
+        {
+            RPSUnit.RPSKind.Rock => "rockChoices",
+            RPSUnit.RPSKind.Paper => "paperChoices",
+            RPSUnit.RPSKind.Scissors => "scissorsChoices",
+            _ => throw new System.ArgumentException("Invalid RPS choice")
+        };
+
+        // קודם נקבל את הערך הנוכחי
+        firebaseManager.DatabaseReference.Child("users").Child(firebaseManager.CurrentUser.UserId)
+            .Child(fieldName).GetValueAsync().ContinueWithOnMainThread(task => {
+                if (task.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Error getting current {fieldName}: {task.Exception}");
+                    return;
+                }
+
+                int currentValue = 0;
+                if (task.Result.Exists)
+                {
+                    currentValue = int.Parse(task.Result.Value.ToString());
+                }
+
+                // נעדכן את הערך החדש
+                firebaseManager.DatabaseReference.Child("users").Child(firebaseManager.CurrentUser.UserId)
+                    .Child(fieldName).SetValueAsync(currentValue + 1).ContinueWithOnMainThread(updateTask => {
+                        if (updateTask.IsFaulted)
+                        {
+                            UnityEngine.Debug.LogError($"Error updating {fieldName}: {updateTask.Exception}");
+                        }
+                    });
+            });
+    }
+
     public void GetUserStats(Action<UserData> callback)
     {
         if (!firebaseManager.IsInitialized || firebaseManager.CurrentUser == null)

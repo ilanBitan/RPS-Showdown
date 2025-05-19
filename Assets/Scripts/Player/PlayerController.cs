@@ -152,15 +152,15 @@ public class PlayerController : MonoBehaviour
                 }
 
                 // 🏁 FLAG
-                if (other.role == RPSUnit.UnitRole.Flag)
-                {
-                    Debug.Log("🎉 You captured the enemy FLAG! YOU WIN!");
-                    Destroy(other.gameObject);
-                    MoveUnitTo(unit, target);
-                    ClearSelection();
-                    Debug.Log($"🏆 Player {myPlayerId} wins the game!");
-                    return;
-                }
+                //if (other.role == RPSUnit.UnitRole.Flag)
+                //{
+                //    Debug.Log("🎉 You captured the enemy FLAG! YOU WIN!");
+                //    Destroy(other.gameObject);
+                //    MoveUnitTo(unit, target);
+                //    ClearSelection();
+                //    Debug.Log($"🏆 Player {myPlayerId} wins the game!");
+                //    return;
+                //}
 
                 // 🔁 RPS Battle
                 if (unit.Kind == other.Kind)

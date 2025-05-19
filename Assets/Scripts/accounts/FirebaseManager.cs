@@ -28,6 +28,7 @@ public class FirebaseManager : MonoBehaviour
     private FirebaseAuth auth;
     private FirebaseUser currentUser;
     private DatabaseReference databaseReference;
+    private FirebaseDatabaseService databaseService;
 
     // State tracking
     private bool isFirebaseInitialized = false;
@@ -48,6 +49,7 @@ public class FirebaseManager : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
+        databaseService = new FirebaseDatabaseService(this);
     }
 
     private void Start()
@@ -160,4 +162,5 @@ public class FirebaseManager : MonoBehaviour
     public FirebaseUser CurrentUser => currentUser;
     public DatabaseReference DatabaseReference => databaseReference;
     public FirebaseAuth Auth => auth;
+    public FirebaseDatabaseService DatabaseService => databaseService;
 }
