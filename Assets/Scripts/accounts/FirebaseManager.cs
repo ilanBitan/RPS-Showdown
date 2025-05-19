@@ -54,8 +54,25 @@ public class FirebaseManager : MonoBehaviour
 
     private void Start()
     {
+        // התנתקות ממשתמש קיים אם יש כזה
+        if (auth != null && auth.CurrentUser != null)
+        {
+            UnityEngine.Debug.Log("Signing out existing user at game start");
+            auth.SignOut();
+        }
+
         // Initialize Firebase with a small delay to ensure Unity is fully ready
         Invoke("InitializeFirebaseWithRetry", 0.5f);
+    }
+
+    private void OnApplicationQuit()
+    {
+        // התנתקות אוטומטית כשהמשחק נסגר
+        if (auth != null && auth.CurrentUser != null)
+        {
+            UnityEngine.Debug.Log("Signing out user before application quit");
+            auth.SignOut();
+        }
     }
 
     private void OnDestroy()

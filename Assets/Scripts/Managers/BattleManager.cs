@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
@@ -73,14 +72,78 @@ public class BattleManager : MonoBehaviour
     private void OnPlayerChoice(RPSUnit.RPSKind choice)
     {
         playerChoice = choice;
-        aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
 
-        UnityEngine.Debug.Log($"⚔️ Battle initiated! Player chose {playerChoice}, AI chose {aiChoice}");
+        // בדיקה אם זו רמה קשה
+        bool isHardLevel = FindObjectOfType<AIPlayerHardController>() != null;
 
-        // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
-        FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+        if (isHardLevel)
+        {
+            UnityEngine.Debug.Log("Hard level detected - AI will make smart choice based on player statistics");
 
-        ResolveBattle();
+            // קבלת סטטיסטיקות מהשרת
+            FirebaseManager.Instance?.DatabaseService?.GetUserStats((userData) =>
+            {
+                if (userData != null)
+                {
+                    UnityEngine.Debug.Log($"Player statistics - Rock: {userData.rockChoices}, Paper: {userData.paperChoices}, Scissors: {userData.scissorsChoices}");
+
+                    // מציאת הכלי הנפוץ ביותר של השחקן
+                    RPSUnit.RPSKind mostCommonChoice = RPSUnit.RPSKind.Rock;
+                    int maxCount = userData.rockChoices;
+
+                    if (userData.paperChoices > maxCount)
+                    {
+                        mostCommonChoice = RPSUnit.RPSKind.Paper;
+                        maxCount = userData.paperChoices;
+                    }
+                    if (userData.scissorsChoices > maxCount)
+                    {
+                        mostCommonChoice = RPSUnit.RPSKind.Scissors;
+                        maxCount = userData.scissorsChoices;
+                    }
+
+                    UnityEngine.Debug.Log($"Player's most common choice: {mostCommonChoice}");
+
+                    // בחירת הכלי המנצח
+                    switch (mostCommonChoice)
+                    {
+                        case RPSUnit.RPSKind.Rock:
+                            aiChoice = RPSUnit.RPSKind.Paper;
+                            break;
+                        case RPSUnit.RPSKind.Paper:
+                            aiChoice = RPSUnit.RPSKind.Scissors;
+                            break;
+                        case RPSUnit.RPSKind.Scissors:
+                            aiChoice = RPSUnit.RPSKind.Rock;
+                            break;
+                    }
+
+                    UnityEngine.Debug.Log($"AI chose {aiChoice} to counter player's {mostCommonChoice}");
+                }
+                else
+                {
+                    // אם אין נתונים, נבחר באופן רנדומלי
+                    aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
+                    UnityEngine.Debug.Log("No player statistics available - AI chose randomly: " + aiChoice);
+                }
+
+                // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+                FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+
+                ResolveBattle();
+            });
+        }
+        else
+        {
+            // רמה רגילה - בחירה רנדומלית
+            aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
+            UnityEngine.Debug.Log($"Battle initiated! Player chose {playerChoice}, AI chose {aiChoice} (random)");
+
+            // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+            FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+
+            ResolveBattle();
+        }
     }
 
     private void ResolveBattle()

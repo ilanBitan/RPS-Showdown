@@ -151,7 +151,7 @@ public class GameSetupManager : MonoBehaviour
 
                     case GameMode.PvE_Hard:
                         // בהמשך תוכל להוסיף גם רמה קשה
-                        aiObj.AddComponent<AIPlayerController>();
+                        aiObj.AddComponent<AIPlayerHardController>();
                         Debug.Log("🧠 Hard AI (placeholder) instantiated.");
                         break;
                 }
