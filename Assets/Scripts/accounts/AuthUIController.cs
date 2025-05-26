@@ -11,16 +11,24 @@ public class AuthUIController : MonoBehaviour
     public GameObject signupPanel;
     public GameObject profilePanel;
     public GameObject loadingPanel;
+    public GameObject resetPasswordPanel;  // New panel for password reset
 
     [Header("Login Fields")]
     public TMP_InputField loginEmail;
     public TMP_InputField loginPassword;
+    public Button forgotPasswordButton;  // New button for forgot password
 
     [Header("Signup Fields")]
     public TMP_InputField signUpEmail;
     public TMP_InputField signUpPassword;
     public TMP_InputField signUpConfirmPassword;
     public TMP_InputField signUpName;
+
+    [Header("Reset Password Fields")]
+    public TMP_InputField resetPasswordEmail;  // New field for reset password email
+    public Button resetPasswordSubmitButton;   // Button to submit reset request
+    public Button resetPasswordBackButton;     // Button to go back to login
+    public TextMeshProUGUI resetPasswordErrorText;  // New error text field for reset password panel
 
     [Header("Profile Info")]
     public TextMeshProUGUI profileUserName_Text;
@@ -32,6 +40,7 @@ public class AuthUIController : MonoBehaviour
 
     [Header("Buttons")]
     public Button refreshStatsButton;
+    public Button mainMenuButton;
 
     // Services
     private FirebaseAuthService authService;
@@ -66,6 +75,8 @@ public class AuthUIController : MonoBehaviour
             signupPanel.SetActive(false);
         if (profilePanel != null)
             profilePanel.SetActive(false);
+        if (resetPasswordPanel != null)
+            resetPasswordPanel.SetActive(false);
 
         // Check if Firebase is already initialized
         if (FirebaseManager.Instance.IsInitialized)
@@ -97,6 +108,26 @@ public class AuthUIController : MonoBehaviour
         {
             refreshStatsButton.onClick.AddListener(OnRefreshStatsButtonClick);
         }
+
+        if (mainMenuButton != null)
+        {
+            mainMenuButton.onClick.AddListener(OnMainMenuButtonClick);
+        }
+
+        if (forgotPasswordButton != null)
+        {
+            forgotPasswordButton.onClick.AddListener(OnForgotPasswordButtonClick);
+        }
+
+        if (resetPasswordSubmitButton != null)
+        {
+            resetPasswordSubmitButton.onClick.AddListener(OnResetPasswordButtonClick);
+        }
+
+        if (resetPasswordBackButton != null)
+        {
+            resetPasswordBackButton.onClick.AddListener(OpenLoginPanel);
+        }
     }
 
     private void OnDestroy()
@@ -123,6 +154,26 @@ public class AuthUIController : MonoBehaviour
         if (refreshStatsButton != null)
         {
             refreshStatsButton.onClick.RemoveListener(OnRefreshStatsButtonClick);
+        }
+
+        if (mainMenuButton != null)
+        {
+            mainMenuButton.onClick.RemoveListener(OnMainMenuButtonClick);
+        }
+
+        if (forgotPasswordButton != null)
+        {
+            forgotPasswordButton.onClick.RemoveListener(OnForgotPasswordButtonClick);
+        }
+
+        if (resetPasswordSubmitButton != null)
+        {
+            resetPasswordSubmitButton.onClick.RemoveListener(OnResetPasswordButtonClick);
+        }
+
+        if (resetPasswordBackButton != null)
+        {
+            resetPasswordBackButton.onClick.RemoveListener(OpenLoginPanel);
         }
     }
 
@@ -205,8 +256,8 @@ public class AuthUIController : MonoBehaviour
 
         if (success)
         {
-            OpenProfilePanel();
             ShowNotificationMessage("Success", "Account created successfully!");
+            OpenLoginPanel();
         }
         else
         {
@@ -233,11 +284,27 @@ public class AuthUIController : MonoBehaviour
 
     #region UI Methods
 
+    public void OpenResetPasswordPanel()
+    {
+        loginPanel.SetActive(false);
+        signupPanel.SetActive(false);
+        profilePanel.SetActive(false);
+        resetPasswordPanel.SetActive(true);
+        loadingPanel?.SetActive(false);
+        ClearErrorMessage();
+        if (resetPasswordErrorText != null)
+        {
+            resetPasswordErrorText.text = "";
+            resetPasswordErrorText.gameObject.SetActive(false);
+        }
+    }
+
     public void OpenLoginPanel()
     {
         loginPanel.SetActive(true);
         signupPanel.SetActive(false);
         profilePanel.SetActive(false);
+        resetPasswordPanel.SetActive(false);
         loadingPanel?.SetActive(false);
         ClearErrorMessage();
     }
@@ -294,6 +361,11 @@ public class AuthUIController : MonoBehaviour
     #endregion
 
     #region Button Handlers
+
+    public void OnMainMenuButtonClick()
+    {
+        FirebaseManager.Instance.RequestSceneChange("MainMenuScene");
+    }
 
     public void OnLoginButtonClick()
     {
@@ -380,6 +452,48 @@ public class AuthUIController : MonoBehaviour
         UpdateProfileInfo();
     }
 
+    public void OnForgotPasswordButtonClick()
+    {
+        OpenResetPasswordPanel();
+    }
+
+    public void OnResetPasswordButtonClick()
+    {
+        if (string.IsNullOrEmpty(resetPasswordEmail.text))
+        {
+            ShowErrorMessage("Please enter your email address");
+            return;
+        }
+
+        ShowLoadingPanel();
+        authService.ResetPassword(resetPasswordEmail.text, (success, message) => {
+            if (success)
+            {
+                HideLoadingPanel();
+                ShowErrorMessage("Check your mail inbox for password reset instructions");
+                StartCoroutine(WaitAndReturnToLogin(2f));
+            }
+            else
+            {
+                HideLoadingPanel();
+                if (message.Contains("No account found"))
+                {
+                    ShowErrorMessage("This email is not registered in our system");
+                }
+                else
+                {
+                    ShowErrorMessage(message);
+                }
+            }
+        });
+    }
+
+    private IEnumerator WaitAndReturnToLogin(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        OpenLoginPanel();
+    }
+
     #endregion
 
     #region Helper Methods
@@ -406,6 +520,11 @@ public class AuthUIController : MonoBehaviour
             errorText.text = message;
             errorText.gameObject.SetActive(true);
         }
+        if (resetPasswordErrorText != null && resetPasswordPanel.activeSelf)
+        {
+            resetPasswordErrorText.text = message;
+            resetPasswordErrorText.gameObject.SetActive(true);
+        }
     }
 
     private void ClearErrorMessage()
@@ -414,6 +533,11 @@ public class AuthUIController : MonoBehaviour
         {
             errorText.text = "";
             errorText.gameObject.SetActive(false);
+        }
+        if (resetPasswordErrorText != null)
+        {
+            resetPasswordErrorText.text = "";
+            resetPasswordErrorText.gameObject.SetActive(false);
         }
     }
 

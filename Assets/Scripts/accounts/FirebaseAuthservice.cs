@@ -130,6 +130,28 @@ public class FirebaseAuthService
         }
     }
 
+    public void ResetPassword(string email, Action<bool, string> callback)
+    {
+        Firebase.Auth.FirebaseAuth auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
+        auth.SendPasswordResetEmailAsync(email).ContinueWithOnMainThread(task => {
+            if (task.IsCanceled)
+            {
+                UnityEngine.Debug.LogError("Password reset was canceled");
+                callback?.Invoke(false, "Password reset was canceled.");
+                return;
+            }
+            if (task.IsFaulted)
+            {
+                string errorMessage = HandleFirebaseError(task.Exception, "Password reset failed");
+                UnityEngine.Debug.LogError($"Password reset error: {errorMessage}");
+                callback?.Invoke(false, errorMessage);
+                return;
+            }
+            UnityEngine.Debug.Log("Password reset email sent successfully");
+            callback?.Invoke(true, "Password reset email sent successfully.");
+        });
+    }
+
     private string HandleFirebaseError(Exception exception, string defaultMessage)
     {
         string errorMessage = defaultMessage;
@@ -168,6 +190,10 @@ public class FirebaseAuthService
                         else if (firebaseEx.Message.Contains("TOO_MANY_ATTEMPTS_TRY_LATER"))
                         {
                             errorMessage = "Too many login attempts. Please try again later";
+                        }
+                        else if (firebaseEx.Message.Contains("USER_NOT_FOUND") || firebaseEx.Message.Contains("EMAIL_NOT_FOUND"))
+                        {
+                            errorMessage = "No account found with this email address";
                         }
                         else
                         {
