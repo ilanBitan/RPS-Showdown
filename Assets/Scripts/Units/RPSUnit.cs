@@ -22,6 +22,26 @@ public class RPSUnit : Unit
         visualController = GetComponent<UnitVisualController>();
     }
 
+    private void Start()
+    {
+        // Don't show tools during setup - wait until setup is complete
+        if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+        {
+            // During setup, only show if it's a Flag or Trap
+            if (role == UnitRole.Flag || role == UnitRole.Trap)
+            {
+                UpdateVisual();
+            }
+            return;
+        }
+        
+        // After setup, show tools for player 1 units
+        if (playerId == 1)
+        {
+            UpdateVisual();
+        }
+    }
+
     public override bool Beats(Unit other)
     {
         if (other is not RPSUnit enemy) return false;
@@ -53,13 +73,35 @@ public class RPSUnit : Unit
 
         if (text != null)
         {
-            text.text = isRevealed ? GetLetter() : "";
+            // During setup phase
+            if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+            {
+                // Only show Flag and Trap during setup
+                text.text = (role == UnitRole.Flag || role == UnitRole.Trap) ? GetLetter() : "";
+            }
+            else
+            {
+                // After setup: Show tools for own units (player 1) always, others only when revealed
+                bool shouldShowTool = (playerId == 1) || isRevealed;
+                text.text = shouldShowTool ? GetLetter() : "";
+            }
             text.color = Color.white;
         }
 
         if (visualController != null)
         {
-            visualController.UpdateWeaponVisual(isRevealed ? GetLetter() : "");
+            // During setup phase
+            if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+            {
+                // Only show Flag and Trap during setup
+                visualController.UpdateWeaponVisual((role == UnitRole.Flag || role == UnitRole.Trap) ? GetLetter() : "");
+            }
+            else
+            {
+                // After setup: Show tools for own units (player 1) always, others only when revealed
+                bool shouldShowTool = (playerId == 1) || isRevealed;
+                visualController.UpdateWeaponVisual(shouldShowTool ? GetLetter() : "");
+            }
         }
     }
 
@@ -74,11 +116,33 @@ public class RPSUnit : Unit
     {
         var text = GetComponentInChildren<TextMeshProUGUI>();
         if (text != null)
-            text.text = "";
+        {
+            // During setup phase
+            if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+            {
+                // Only show Flag and Trap during setup
+                text.text = (role == UnitRole.Flag || role == UnitRole.Trap) ? GetLetter() : "";
+            }
+            else
+            {
+                // After setup: Keep own units visible, hide others
+                text.text = (playerId == 1) ? GetLetter() : "";
+            }
+        }
 
         if (visualController != null)
         {
-            visualController.UpdateWeaponVisual("");
+            // During setup phase
+            if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+            {
+                // Only show Flag and Trap during setup
+                visualController.UpdateWeaponVisual((role == UnitRole.Flag || role == UnitRole.Trap) ? GetLetter() : "");
+            }
+            else
+            {
+                // After setup: Keep own units visible, hide others
+                visualController.UpdateWeaponVisual((playerId == 1) ? GetLetter() : "");
+            }
         }
     }
 
