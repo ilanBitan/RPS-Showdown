@@ -15,8 +15,14 @@ public class GameMenuManager : MonoBehaviour
 
     public void OnSettingsPressed()
     {
-        // ğòáåø ìñöğú äôøåôéì
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         SceneManager.LoadScene("LoginScene");
+    }
+
+    public void OnLocalBattlePressed()
+    {
+        GameModeManager.Instance.SelectedMode = GameMode.PvP;
+        SceneManager.LoadScene("GameScene");
     }
 
     public void OnEasyPressed()

@@ -35,6 +35,13 @@ public class BoardManager : MonoBehaviour
 
                 rt.anchoredPosition = new Vector2(col * 100, -row * 100);
                 rt.sizeDelta = new Vector2(100, 100);
+
+                // Initialize the Tile component's Position
+                Tile tileComponent = tile.GetComponent<Tile>();
+                if (tileComponent != null)
+                {
+                    tileComponent.SetPosition(new Vector2Int(col, row));
+                }
             }
         }
     }

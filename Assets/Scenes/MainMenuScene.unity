@@ -233,23 +233,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
-      value: 5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1254028685}
+      objectReference: {fileID: 1071118485}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: LoadScene
+      value: OnLocalBattlePressed
       objectReference: {fileID: 0}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: SceneLoader, Assembly-CSharp
+      value: GameMenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 3771911998748086186, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
@@ -261,11 +261,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_text
-      value: Shop
+      value: Local Battle
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSize
-      value: 120
+      value: 105
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontStyle
@@ -273,7 +273,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSizeMax
-      value: 120
+      value: 105
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSizeMin
@@ -284,16 +284,24 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
+      propertyPath: m_overflowMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_enableAutoSizing
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
+      propertyPath: m_enableWordWrapping
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4686994955643559490, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Name
-      value: 'Text_Shop '
+      value: 'Text_Local '
       objectReference: {fileID: 0}
     - target: {fileID: 5487413459753388674, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Name
-      value: Button_Shop
+      value: Button_Local
       objectReference: {fileID: 0}
     - target: {fileID: 8023751627538707942, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Pivot.x
@@ -1381,11 +1389,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_text
-      value: Play Game
+      value: AI Battle
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSize
-      value: 120
+      value: 136.05
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontStyle
@@ -1393,7 +1401,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSizeMax
-      value: 120
+      value: 150
       objectReference: {fileID: 0}
     - target: {fileID: 4646668273750736131, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_fontSizeMin
@@ -1409,11 +1417,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4686994955643559490, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Name
-      value: 'Text_Play '
+      value: 'Text_AI '
       objectReference: {fileID: 0}
     - target: {fileID: 5487413459753388674, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Name
-      value: Button_PlayGame
+      value: Button_AI
       objectReference: {fileID: 0}
     - target: {fileID: 8023751627538707942, guid: 5c90c29e0dd4f4a418e3d239adaa650b, type: 3}
       propertyPath: m_Pivot.x
