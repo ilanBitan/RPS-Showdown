@@ -112,19 +112,24 @@ public class GameSetupManager : MonoBehaviour
 
     private void FinalizeSetup()
     {
-        Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
+      Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
 
-        // 🪨📄✂️ מגדיר תפקידי RPS ליחידות שאין להן תפקיד
-        AssignRandomRPS(player1Units);
-        AssignRandomRPS(player2Units);
+    // 🪨📄✂️ מגדיר תפקידי RPS ליחידות שאין להן תפקיד
+    AssignRandomRPS(player1Units);
+    AssignRandomRPS(player2Units);
 
-        // ❌ מבטל אפשרות בחירה ליחידות אחרי שהוגדרו
-        foreach (var unit in player1Units) unit.DisableSetupSelection();
-        foreach (var unit in player2Units) unit.DisableSetupSelection();
+    // ✅ מסמן שה-Setup הסתיים
+    setupComplete = true;
 
-        // ✅ מסמן שה-Setup הסתיים
-        setupComplete = true;
-        Debug.Log("✅ Setup complete. Game begins!");
+    // 🔄 Refresh all visuals now that setup is complete
+    foreach (var unit in player1Units) unit.UpdateVisual();
+    foreach (var unit in player2Units) unit.UpdateVisual();
+
+    // ❌ מבטל אפשרות בחירה ליחידות אחרי שהוגדרו
+    foreach (var unit in player1Units) unit.DisableSetupSelection();
+    foreach (var unit in player2Units) unit.DisableSetupSelection();
+
+    Debug.Log("✅ Setup complete. Game begins!");
 
         // ⏳ מפעיל טיימר כללי למשחק
         TurnTimerManager.Instance?.ActivateGameTimer();
