@@ -5,6 +5,7 @@ using System;
 using Firebase.Database;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 public class RoomManager : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class RoomManager : MonoBehaviour
     private DatabaseReference roomsRef;
     private string currentRoomId;
     private bool isHost = false;
+    private bool isListening = false;
 
     private void Awake()
     {
@@ -54,7 +56,7 @@ public class RoomManager : MonoBehaviour
         roomPanel.SetActive(true);
     }
 
-    private void CreateRoom()
+    private async void CreateRoom()
     {
         // Generate a unique room ID
         currentRoomId = Guid.NewGuid().ToString();
@@ -71,26 +73,29 @@ public class RoomManager : MonoBehaviour
             { "createdAt", ServerValue.Timestamp }
         };
 
-        roomsRef.Child(currentRoomId).SetValueAsync(roomData).ContinueWith(task =>
+        try
         {
-            if (task.IsFaulted)
+            await roomsRef.Child(currentRoomId).SetValueAsync(roomData);
+
+            // Show room ID to host on main thread
+            UnityMainThreadDispatcher.Instance().Enqueue(() =>
             {
-                UnityEngine.Debug.LogError("Failed to create room: " + task.Exception);
-                return;
-            }
+                UnityEngine.Debug.Log($"Room created successfully. Setting text to: Room ID: {currentRoomId}");
+                roomIdText.text = "Room ID: " + currentRoomId;
+                roomIdText.gameObject.SetActive(true);
+                statusText.text = "Waiting for opponent...";
 
-            // Show room ID to host
-            UnityEngine.Debug.Log($"Room created successfully. Setting text to: Room ID: {currentRoomId}");
-            roomIdText.text = "Room ID: " + currentRoomId;
-            roomIdText.gameObject.SetActive(true);
-            statusText.text = "Waiting for opponent...";
-
-            // Start listening for guest joining
-            StartListeningForGuest();
-        });
+                // Start listening for guest joining
+                StartListeningForGuest();
+            });
+        }
+        catch (System.Exception ex)
+        {
+            UnityEngine.Debug.LogError("Failed to create room: " + ex.Message);
+        }
     }
 
-    private void JoinRoom()
+    private async void JoinRoom()
     {
         string roomId = roomIdInput.text.Trim();
         if (string.IsNullOrEmpty(roomId))
@@ -99,26 +104,27 @@ public class RoomManager : MonoBehaviour
             return;
         }
 
-        // Check if room exists and has space
-        roomsRef.Child(roomId).GetValueAsync().ContinueWith(task =>
+        try
         {
-            if (task.IsFaulted)
-            {
-                UnityEngine.Debug.LogError("Failed to check room: " + task.Exception);
-                return;
-            }
+            // Check if room exists and has space
+            DataSnapshot snapshot = await roomsRef.Child(roomId).GetValueAsync();
 
-            DataSnapshot snapshot = task.Result;
             if (!snapshot.Exists)
             {
-                statusText.text = "Room not found";
+                UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                {
+                    statusText.text = "Room not found";
+                });
                 return;
             }
 
             string guestId = snapshot.Child("guestId").Value?.ToString();
             if (!string.IsNullOrEmpty(guestId))
             {
-                statusText.text = "Room is full";
+                UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                {
+                    statusText.text = "Room is full";
+                });
                 return;
             }
 
@@ -129,35 +135,47 @@ public class RoomManager : MonoBehaviour
             Dictionary<string, object> updates = new Dictionary<string, object>
             {
                 { "guestId", FirebaseManager.Instance.CurrentUser.UserId },
-                { "status", "ready" }
+                { "status", "waiting" } // Keep status as waiting, let host change it to ready
             };
 
-            roomsRef.Child(roomId).UpdateChildrenAsync(updates).ContinueWith(updateTask =>
-            {
-                if (updateTask.IsFaulted)
-                {
-                    UnityEngine.Debug.LogError("Failed to join room: " + updateTask.Exception);
-                    return;
-                }
+            await roomsRef.Child(roomId).UpdateChildrenAsync(updates);
 
+            UnityMainThreadDispatcher.Instance().Enqueue(() =>
+            {
                 statusText.text = "Joined room! Waiting for host...";
                 StartListeningForGameStart();
             });
-        });
+        }
+        catch (System.Exception ex)
+        {
+            UnityEngine.Debug.LogError("Failed to join room: " + ex.Message);
+        }
     }
 
     private void StartListeningForGuest()
     {
-        roomsRef.Child(currentRoomId).ValueChanged += HandleRoomValueChanged;
+        if (!isListening)
+        {
+            UnityEngine.Debug.Log("Starting to listen for guest...");
+            roomsRef.Child(currentRoomId).ValueChanged += HandleRoomValueChanged;
+            isListening = true;
+        }
     }
 
     private void StartListeningForGameStart()
     {
-        roomsRef.Child(currentRoomId).ValueChanged += HandleRoomValueChanged;
+        if (!isListening)
+        {
+            UnityEngine.Debug.Log("Starting to listen for game start...");
+            roomsRef.Child(currentRoomId).ValueChanged += HandleRoomValueChanged;
+            isListening = true;
+        }
     }
 
     private void HandleRoomValueChanged(object sender, ValueChangedEventArgs args)
     {
+        UnityEngine.Debug.Log("HandleRoomValueChanged called!");
+
         if (args.DatabaseError != null)
         {
             UnityEngine.Debug.LogError("Database error: " + args.DatabaseError);
@@ -165,29 +183,54 @@ public class RoomManager : MonoBehaviour
         }
 
         DataSnapshot snapshot = args.Snapshot;
-        if (!snapshot.Exists) return;
+        if (!snapshot.Exists)
+        {
+            UnityEngine.Debug.Log("Snapshot doesn't exist");
+            return;
+        }
 
         string status = snapshot.Child("status").Value?.ToString();
         string guestId = snapshot.Child("guestId").Value?.ToString();
+        string hostId = snapshot.Child("hostId").Value?.ToString();
 
-        if (isHost && !string.IsNullOrEmpty(guestId))
+        UnityEngine.Debug.Log($"Room state changed - Status: {status}, GuestId: {guestId}, HostId: {hostId}, IsHost: {isHost}");
+
+        // Use main thread dispatcher to update UI and start game
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
-            // Guest has joined, update status
-            statusText.text = "Opponent joined! Starting game...";
-            StartGame();
-        }
-        else if (!isHost && status == "ready")
-        {
-            // Host is ready, start game
-            statusText.text = "Host is ready! Starting game...";
-            StartGame();
-        }
+            if (status == "ready" && !string.IsNullOrEmpty(guestId) && guestId != "")
+            {
+                // Both players are ready, start game
+                UnityEngine.Debug.Log($"Both players ready - starting game. IsHost: {isHost}");
+                statusText.text = "Both players ready! Starting game...";
+                StartGame();
+            }
+            else if (isHost && !string.IsNullOrEmpty(guestId) && guestId != "" && status == "waiting")
+            {
+                // Guest just joined, update status to ready for both
+                UnityEngine.Debug.Log("Guest joined - updating status to ready");
+                statusText.text = "Opponent joined! Preparing game...";
+
+                // Update room status to ready
+                Dictionary<string, object> updates = new Dictionary<string, object>
+                {
+                    { "status", "ready" }
+                };
+                roomsRef.Child(currentRoomId).UpdateChildrenAsync(updates);
+            }
+        });
     }
 
     private void StartGame()
     {
+        UnityEngine.Debug.Log($"Starting game... IsHost: {isHost}");
+
         // Stop listening to room changes
-        roomsRef.Child(currentRoomId).ValueChanged -= HandleRoomValueChanged;
+        if (isListening)
+        {
+            roomsRef.Child(currentRoomId).ValueChanged -= HandleRoomValueChanged;
+            isListening = false;
+        }
 
         // Load game scene
         GameModeManager.Instance.SelectedMode = GameMode.PvP;
@@ -197,9 +240,10 @@ public class RoomManager : MonoBehaviour
     private void OnDestroy()
     {
         // Clean up listeners
-        if (roomsRef != null && !string.IsNullOrEmpty(currentRoomId))
+        if (roomsRef != null && !string.IsNullOrEmpty(currentRoomId) && isListening)
         {
             roomsRef.Child(currentRoomId).ValueChanged -= HandleRoomValueChanged;
+            isListening = false;
         }
     }
 }
