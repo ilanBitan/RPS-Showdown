@@ -1,9 +1,19 @@
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GameMenuManager : MonoBehaviour
 {
     public GameObject gameModePanel;
+    [SerializeField] private RoomManager roomManager;
+
+    private void Start()
+    {
+        if (roomManager == null)
+        {
+            roomManager = FindObjectOfType<RoomManager>();
+        }
+    }
 
     public void OnPlayGamePressed()
     {
@@ -15,14 +25,18 @@ public class GameMenuManager : MonoBehaviour
 
     public void OnSettingsPressed()
     {
-        // ����� ����� �������
+        //   
         SceneManager.LoadScene("LoginScene");
     }
 
     public void OnLocalBattlePressed()
     {
-        GameModeManager.Instance.SelectedMode = GameMode.PvP;
-        SceneManager.LoadScene("GameScene");
+        if (roomManager == null)
+        {
+            UnityEngine.Debug.LogError("RoomManager not found! Make sure it's attached to the RoomPanel.");
+            return;
+        }
+        roomManager.ShowRoomPanel();
     }
 
     public void OnEasyPressed()
