@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.Diagnostics;
 
 public class PlayerController : MonoBehaviour
 {
@@ -56,7 +57,7 @@ public class PlayerController : MonoBehaviour
 
         if (unit.role == RPSUnit.UnitRole.Flag || unit.role == RPSUnit.UnitRole.Trap)
         {
-            Debug.Log("⛔ You cannot select a Flag or Trap.");
+            UnityEngine.Debug.Log("⛔ You cannot select a Flag or Trap.");
             return;
         }
 
@@ -66,7 +67,7 @@ public class PlayerController : MonoBehaviour
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive()) return;
 
         selectedUnit = unit;
-        Debug.Log($"🎯 Selected unit at [col {unit.Position.x}, row {unit.Position.y}]");
+        UnityEngine.Debug.Log($"🎯 Selected unit at [col {unit.Position.x}, row {unit.Position.y}]");
 
         if (activeOutline != null)
             Destroy(activeOutline);
@@ -90,9 +91,9 @@ public class PlayerController : MonoBehaviour
         Animator anim = unit.GetComponent<Animator>();
         if (anim != null)
         {
-    anim.SetInteger("playerId", unit.playerId); // 1 for player, 2 for enemy
-    anim.ResetTrigger("jump");
-    anim.SetTrigger("jump");
+            anim.SetInteger("playerId", unit.playerId); // 1 for player, 2 for enemy
+            anim.ResetTrigger("jump");
+            anim.SetTrigger("jump");
         }
 
         // Wait a short time to allow jump animation to show
@@ -107,7 +108,7 @@ public class PlayerController : MonoBehaviour
 
         if (target.x < 0 || target.x >= columns || target.y < 0 || target.y >= rows)
         {
-            Debug.Log("⛔ Move is out of board bounds");
+            UnityEngine.Debug.Log("⛔ Move is out of board bounds");
             return;
         }
 
@@ -119,13 +120,13 @@ public class PlayerController : MonoBehaviour
             {
                 if (other.playerId == myPlayerId)
                 {
-                    Debug.Log("🚫 Cell is occupied by your own unit");
+                    UnityEngine.Debug.Log("🚫 Cell is occupied by your own unit");
                     return;
                 }
 
                 if (other.role == RPSUnit.UnitRole.Flag)
                 {
-                    Debug.Log("🎯 You captured the enemy FLAG!");
+                    UnityEngine.Debug.Log("🎯 You captured the enemy FLAG!");
 
                     other.Reveal();
                     MoveUnitTo(unit, target);
@@ -142,7 +143,7 @@ public class PlayerController : MonoBehaviour
 
                 if (other.role == RPSUnit.UnitRole.Trap)
                 {
-                    Debug.Log("💥 Trap triggered! Attacker destroyed.");
+                    UnityEngine.Debug.Log("💥 Trap triggered! Attacker destroyed.");
 
                     unit.Reveal();
                     Destroy(unit.gameObject);
@@ -165,7 +166,7 @@ public class PlayerController : MonoBehaviour
                 // 🔁 RPS Battle
                 if (unit.Kind == other.Kind)
                 {
-                    Debug.Log("⚔️ Equal kinds – entering RPS battle mode!");
+                    UnityEngine.Debug.Log("⚔️ Equal kinds – entering RPS battle mode!");
                     BattleManager.Instance?.StartBattle(unit, other, target);
                     return;
                 }
@@ -175,13 +176,13 @@ public class PlayerController : MonoBehaviour
 
                 if (unit.Beats(other))
                 {
-                    Debug.Log("✅ Attacker wins – replacing enemy");
+                    UnityEngine.Debug.Log("✅ Attacker wins – replacing enemy");
                     Destroy(other.gameObject);
                     MoveUnitTo(unit, target);
                 }
                 else
                 {
-                    Debug.Log("❌ Attacker loses – removed");
+                    UnityEngine.Debug.Log("❌ Attacker loses – removed");
                     Destroy(unit.gameObject);
                 }
 
@@ -196,44 +197,44 @@ public class PlayerController : MonoBehaviour
         TurnManager.Instance?.EndTurn();
     }
 
-void MoveUnitTo(RPSUnit unit, Vector2Int target)
-{
-    Transform targetTile = GetTileTransform(target);
-    if (targetTile != null)
+    void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {
-        StartCoroutine(SmoothMove(unit, targetTile, target));
+        Transform targetTile = GetTileTransform(target);
+        if (targetTile != null)
+        {
+            StartCoroutine(SmoothMove(unit, targetTile, target));
+        }
     }
-}
-System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Vector2Int targetGridPos)
-{
-    RectTransform rt = unit.GetComponent<RectTransform>();
-    if (rt == null) yield break;
-
-    Vector3 start = rt.position;
-    Vector3 end = targetTile.position;
-
-    float elapsed = 0f;
-    float duration = 0.25f; // smooth time (adjust as needed)
-
-    while (elapsed < duration)
+    System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Vector2Int targetGridPos)
     {
-        rt.position = Vector3.Lerp(start, end, elapsed / duration);
-        elapsed += Time.deltaTime;
-        yield return null;
+        RectTransform rt = unit.GetComponent<RectTransform>();
+        if (rt == null) yield break;
+
+        Vector3 start = rt.position;
+        Vector3 end = targetTile.position;
+
+        float elapsed = 0f;
+        float duration = 0.25f; // smooth time (adjust as needed)
+
+        while (elapsed < duration)
+        {
+            rt.position = Vector3.Lerp(start, end, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // Snap to final position
+        rt.position = end;
+
+        // Update hierarchy and grid data
+        unit.transform.SetParent(targetTile, false);
+        rt.anchoredPosition = Vector2.zero;
+        unit.Position = targetGridPos;
+        BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
+
+
+        UnityEngine.Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
     }
-
-    // Snap to final position
-    rt.position = end;
-
-    // Update hierarchy and grid data
-    unit.transform.SetParent(targetTile, false);
-    rt.anchoredPosition = Vector2.zero;
-    unit.Position = targetGridPos;
-    BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
-
-
-    Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
-}
 
 
     Transform GetTileTransform(Vector2Int pos)
@@ -267,39 +268,39 @@ System.Collections.IEnumerator SmoothMove(RPSUnit unit, Transform targetTile, Ve
     {
         if (selectedUnit == null)
         {
-            Debug.Log("❌ No unit selected.");
+            UnityEngine.Debug.Log("❌ No unit selected.");
             return;
         }
 
         if (!selectedUnit.IsMovable())
         {
-            Debug.Log("⛔ Selected unit cannot move.");
+            UnityEngine.Debug.Log("⛔ Selected unit cannot move.");
             return;
         }
 
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive())
         {
-            Debug.Log("⚔️ Battle in progress – cannot move now.");
+            UnityEngine.Debug.Log("⚔️ Battle in progress – cannot move now.");
             return;
         }
 
         if (TurnManager.Instance == null || !TurnManager.Instance.IsPlayerTurn(myPlayerId))
         {
-            Debug.Log("⏳ Not your turn.");
+            UnityEngine.Debug.Log("⏳ Not your turn.");
             return;
         }
 
         Vector2Int direction = tilePos - selectedUnit.Position;
-        Debug.Log($"📍 Tile tapped at {tilePos}, selected unit at {selectedUnit.Position}, direction {direction}");
+        UnityEngine.Debug.Log($"📍 Tile tapped at {tilePos}, selected unit at {selectedUnit.Position}, direction {direction}");
 
         if (Mathf.Abs(direction.x) + Mathf.Abs(direction.y) == 1)
         {
-            Debug.Log("✅ Valid move. Trying to move unit...");
+            UnityEngine.Debug.Log("✅ Valid move. Trying to move unit...");
             TryMoveUnit(selectedUnit, direction);
         }
         else
         {
-            Debug.Log("🚫 Invalid move – must move one tile only.");
+            UnityEngine.Debug.Log("🚫 Invalid move – must move one tile only.");
         }
     }
 }

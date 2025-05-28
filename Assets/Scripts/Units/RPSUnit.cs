@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.Diagnostics;
 
 public class RPSUnit : Unit
 {
@@ -34,7 +35,7 @@ public class RPSUnit : Unit
             }
             return;
         }
-        
+
         // After setup, show tools for player 1 units
         if (playerId == 1)
         {
@@ -109,7 +110,7 @@ public class RPSUnit : Unit
     {
         isRevealed = true;
         UpdateVisual();
-        Debug.Log($"📣 {name} Revealed → {GetLetter()}");
+        UnityEngine.Debug.Log($"📣 {name} Revealed → {GetLetter()}");
     }
 
     public void ResetVisual()
@@ -171,7 +172,7 @@ public class RPSUnit : Unit
 
         if (!BoardManager.Instance.IsInsideBoard(targetPos))
         {
-            Debug.Log($"⛔ Move is out of board bounds");
+            UnityEngine.Debug.Log($"⛔ Move is out of board bounds");
             return false;
         }
 
@@ -181,14 +182,14 @@ public class RPSUnit : Unit
         {
             if (target.playerId == playerId)
             {
-                Debug.Log("🚫 Cell is occupied by your own unit");
+                UnityEngine.Debug.Log("🚫 Cell is occupied by your own unit");
                 return false;
             }
 
             RPSUnit enemy = target as RPSUnit;
             if (enemy == null)
             {
-                Debug.Log("❌ Target is not a valid RPS unit");
+                UnityEngine.Debug.Log("❌ Target is not a valid RPS unit");
                 return false;
             }
 
@@ -197,7 +198,7 @@ public class RPSUnit : Unit
 
             if (enemy.role == UnitRole.Trap)
             {
-                Debug.Log("💥 Trap triggered! Unit destroyed.");
+                UnityEngine.Debug.Log("💥 Trap triggered! Unit destroyed.");
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
@@ -205,24 +206,24 @@ public class RPSUnit : Unit
 
             if (enemy.role == UnitRole.Flag)
             {
-                Debug.Log("🎯 Flag captured!");
+                UnityEngine.Debug.Log("🎯 Flag captured!");
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
                 BoardManager.Instance.PlaceUnit(this, targetPos);
 
-           /*     // ✨ הצג את מסך הניצחון
-                GameEndHandler handler = FindObjectOfType<GameEndHandler>();
-                if (handler != null)
-                    handler.ShowVictory(playerId == 1 ? "Player 1" : "Player 2");
-*/
+                /*     // ✨ הצג את מסך הניצחון
+                     GameEndHandler handler = FindObjectOfType<GameEndHandler>();
+                     if (handler != null)
+                         handler.ShowVictory(playerId == 1 ? "Player 1" : "Player 2");
+     */
                 return true;
             }
 
 
             if (Kind == enemy.Kind)
             {
-                Debug.Log("⚔️ Equal units – triggering RPS battle");
+                UnityEngine.Debug.Log("⚔️ Equal units – triggering RPS battle");
                 if (BattleManager.Instance != null)
                     BattleManager.Instance.StartBattle(this, enemy, targetPos);
                 return false;
@@ -230,7 +231,7 @@ public class RPSUnit : Unit
 
             if (Beats(enemy))
             {
-                Debug.Log($"✅ {name} wins – replacing {enemy.name}");
+                UnityEngine.Debug.Log($"✅ {name} wins – replacing {enemy.name}");
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
@@ -240,13 +241,13 @@ public class RPSUnit : Unit
 
             if (enemy.Beats(this))
             {
-                Debug.Log($"💀 {name} loses to {enemy.name} and is destroyed");
+                UnityEngine.Debug.Log($"💀 {name} loses to {enemy.name} and is destroyed");
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
             }
 
-            Debug.Log("❓ Unhandled combat case");
+            UnityEngine.Debug.Log("❓ Unhandled combat case");
             return false;
         }
 
@@ -255,62 +256,62 @@ public class RPSUnit : Unit
         return true;
     }
 
-public void MoveTo(Vector2Int newPos)
-{
-    // Handle board management logic
-    BoardManager.Instance.MoveUnit(this, newPos);
-    SetPosition(newPos);
-    
-    // Get the target tile transform
-    Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
-    if (targetTile != null)
+    public void MoveTo(Vector2Int newPos)
     {
-        // Start the animation coroutine
-        StartCoroutine(SmoothMove(targetTile, newPos));
-    }
-    
-    Debug.Log($"✅ Unit move initiated to → Column: {newPos.x}, Row: {newPos.y}");
-}
+        // Handle board management logic
+        BoardManager.Instance.MoveUnit(this, newPos);
+        SetPosition(newPos);
 
-private IEnumerator SmoothMove(Transform targetTile, Vector2Int targetGridPos)
-{
-    // Trigger jump animation
-    Animator anim = GetComponent<Animator>();
-    if (anim != null)
-    {
-        anim.SetInteger("playerId", playerId);
-        anim.ResetTrigger("jump");
-        anim.SetTrigger("jump");
+        // Get the target tile transform
+        Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
+        if (targetTile != null)
+        {
+            // Start the animation coroutine
+            StartCoroutine(SmoothMove(targetTile, newPos));
+        }
+
+        UnityEngine.Debug.Log($"✅ Unit move initiated to → Column: {newPos.x}, Row: {newPos.y}");
     }
 
-    // Wait for animation to start
-    yield return new WaitForSeconds(0.2f);
-    
-    RectTransform rt = GetComponent<RectTransform>();
-    if (rt == null) yield break;
-
-    Vector3 start = rt.position;
-    Vector3 end = targetTile.position;
-
-    float elapsed = 0f;
-    float duration = 0.25f; // smooth time
-
-    while (elapsed < duration)
+    private IEnumerator SmoothMove(Transform targetTile, Vector2Int targetGridPos)
     {
-        rt.position = Vector3.Lerp(start, end, elapsed / duration);
-        elapsed += Time.deltaTime;
-        yield return null;
+        // Trigger jump animation
+        Animator anim = GetComponent<Animator>();
+        if (anim != null)
+        {
+            anim.SetInteger("playerId", playerId);
+            anim.ResetTrigger("jump");
+            anim.SetTrigger("jump");
+        }
+
+        // Wait for animation to start
+        yield return new WaitForSeconds(0.2f);
+
+        RectTransform rt = GetComponent<RectTransform>();
+        if (rt == null) yield break;
+
+        Vector3 start = rt.position;
+        Vector3 end = targetTile.position;
+
+        float elapsed = 0f;
+        float duration = 0.25f; // smooth time
+
+        while (elapsed < duration)
+        {
+            rt.position = Vector3.Lerp(start, end, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // Snap to final position
+        rt.position = end;
+
+        // Update hierarchy and grid data
+        transform.SetParent(targetTile, false);
+        rt.anchoredPosition = Vector2.zero;
+
+        UnityEngine.Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
     }
-
-    // Snap to final position
-    rt.position = end;
-
-    // Update hierarchy and grid data
-    transform.SetParent(targetTile, false);
-    rt.anchoredPosition = Vector2.zero;
-    
-    Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
-}
 
     public bool IsEnemy(RPSUnit other)
     {

@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Collections;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 public class UnitPlacer : MonoBehaviour
 {
@@ -52,9 +54,9 @@ public class UnitPlacer : MonoBehaviour
             Vector2Int pos = new Vector2Int(col, row);
             BoardManager.Instance.PlaceUnit(rps, pos);
 
-            Debug.Log($"✅ Placed {unitObj.name} for Player {playerId} at [col {col}, row {row}]");
+            UnityEngine.Debug.Log($"✅ Placed {unitObj.name} for Player {playerId} at [col {col}, row {row}]");
 
-            Image img = unitObj.GetComponent<Image>();
+            UnityEngine.UI.Image img = unitObj.GetComponent<UnityEngine.UI.Image>();
             if (img != null)
             {
                 Color c = img.color;
@@ -68,11 +70,11 @@ public class UnitPlacer : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"❌ Failed to get RPSUnit component on {unitObj.name}");
+            UnityEngine.Debug.LogError($"❌ Failed to get RPSUnit component on {unitObj.name}");
         }
     }
 
-    IEnumerator FadeIn(Image img, float duration)
+    IEnumerator FadeIn(UnityEngine.UI.Image img, float duration)
     {
         float time = 0f;
         Color start = img.color;

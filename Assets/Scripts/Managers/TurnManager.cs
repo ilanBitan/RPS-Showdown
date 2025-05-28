@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class TurnManager : MonoBehaviour
 {
@@ -43,7 +44,7 @@ public class TurnManager : MonoBehaviour
 
     public void StartDuel(RPSUnit unit1, RPSUnit unit2)
     {
-        int winner = Random.Range(0, 2);
+        int winner = UnityEngine.Random.Range(0, 2);
 
         if (winner == 0)
         {

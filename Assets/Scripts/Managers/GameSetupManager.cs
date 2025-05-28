@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class GameSetupManager : MonoBehaviour
@@ -36,7 +38,7 @@ public class GameSetupManager : MonoBehaviour
             unit.ResetVisual();
         }
 
-        Debug.Log("🎯 Setup started. Select FLAG for Player 1.");
+        UnityEngine.Debug.Log("🎯 Setup started. Select FLAG for Player 1.");
 
         // ✅ הוספת העברת היחידות ל־GameManager
         GameManager.Instance?.SetPlayersUnits(player1Units, player2Units);
@@ -53,7 +55,7 @@ public class GameSetupManager : MonoBehaviour
                 unit.role = RPSUnit.UnitRole.Flag;
                 unit.UpdateVisual();
                 selectionStep++;
-                Debug.Log("🎯 Player 1 Flag selected. Select TRAP.");
+                UnityEngine.Debug.Log("🎯 Player 1 Flag selected. Select TRAP.");
                 break;
 
             case 1:
@@ -64,11 +66,11 @@ public class GameSetupManager : MonoBehaviour
 
                 if (GameModeManager.Instance.SelectedMode == GameMode.PvP)
                 {
-                    Debug.Log("🎯 Now select FLAG for Player 2.");
+                    UnityEngine.Debug.Log("🎯 Now select FLAG for Player 2.");
                 }
                 else
                 {
-                    Debug.Log("🤖 AI is choosing FLAG and TRAP...");
+                    UnityEngine.Debug.Log("🤖 AI is choosing FLAG and TRAP...");
                     SelectFTForAI();
                     FinalizeSetup();
                 }
@@ -79,7 +81,7 @@ public class GameSetupManager : MonoBehaviour
                 unit.role = RPSUnit.UnitRole.Flag;
                 unit.UpdateVisual();
                 selectionStep++;
-                Debug.Log("🎯 Player 2 Flag selected. Select TRAP.");
+                UnityEngine.Debug.Log("🎯 Player 2 Flag selected. Select TRAP.");
                 break;
 
             case 3:
@@ -96,40 +98,40 @@ public class GameSetupManager : MonoBehaviour
         List<RPSUnit> available = player2Units.FindAll(u => u.role == RPSUnit.UnitRole.None);
         if (available.Count < 2) return;
 
-        int index1 = Random.Range(0, available.Count);
+        int index1 = UnityEngine.Random.Range(0, available.Count);
         RPSUnit flag = available[index1];
         flag.role = RPSUnit.UnitRole.Flag;
         flag.UpdateVisual();
 
         available.RemoveAt(index1);
-        int index2 = Random.Range(0, available.Count);
+        int index2 = UnityEngine.Random.Range(0, available.Count);
         RPSUnit trap = available[index2];
         trap.role = RPSUnit.UnitRole.Trap;
         trap.UpdateVisual();
 
-        Debug.Log($"🤖 AI selected FLAG: {flag.name}, TRAP: {trap.name}");
+        UnityEngine.Debug.Log($"🤖 AI selected FLAG: {flag.name}, TRAP: {trap.name}");
     }
 
     private void FinalizeSetup()
     {
-      Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
+        UnityEngine.Debug.Log("🎲 Finalizing setup: assigning RPS roles randomly...");
 
-    // 🪨📄✂️ מגדיר תפקידי RPS ליחידות שאין להן תפקיד
-    AssignRandomRPS(player1Units);
-    AssignRandomRPS(player2Units);
+        // 🪨📄✂️ מגדיר תפקידי RPS ליחידות שאין להן תפקיד
+        AssignRandomRPS(player1Units);
+        AssignRandomRPS(player2Units);
 
-    // ✅ מסמן שה-Setup הסתיים
-    setupComplete = true;
+        // ✅ מסמן שה-Setup הסתיים
+        setupComplete = true;
 
-    // 🔄 Refresh all visuals now that setup is complete
-    foreach (var unit in player1Units) unit.UpdateVisual();
-    foreach (var unit in player2Units) unit.UpdateVisual();
+        // 🔄 Refresh all visuals now that setup is complete
+        foreach (var unit in player1Units) unit.UpdateVisual();
+        foreach (var unit in player2Units) unit.UpdateVisual();
 
-    // ❌ מבטל אפשרות בחירה ליחידות אחרי שהוגדרו
-    foreach (var unit in player1Units) unit.DisableSetupSelection();
-    foreach (var unit in player2Units) unit.DisableSetupSelection();
+        // ❌ מבטל אפשרות בחירה ליחידות אחרי שהוגדרו
+        foreach (var unit in player1Units) unit.DisableSetupSelection();
+        foreach (var unit in player2Units) unit.DisableSetupSelection();
 
-    Debug.Log("✅ Setup complete. Game begins!");
+        UnityEngine.Debug.Log("✅ Setup complete. Game begins!");
 
         // ⏳ מפעיל טיימר כללי למשחק
         TurnTimerManager.Instance?.ActivateGameTimer();
@@ -146,18 +148,18 @@ public class GameSetupManager : MonoBehaviour
                 {
                     case GameMode.PvE_Easy:
                         aiObj.AddComponent<AIPlayerController>();
-                        Debug.Log("🧠 Easy AI instantiated.");
+                        UnityEngine.Debug.Log("🧠 Easy AI instantiated.");
                         break;
 
                     case GameMode.PvE_Medium:
                         aiObj.AddComponent<AIPlayerMediumController>();
-                        Debug.Log("🧠 Medium AI instantiated.");
+                        UnityEngine.Debug.Log("🧠 Medium AI instantiated.");
                         break;
 
                     case GameMode.PvE_Hard:
                         // בהמשך תוכל להוסיף גם רמה קשה
                         aiObj.AddComponent<AIPlayerHardController>();
-                        Debug.Log("🧠 Hard AI (placeholder) instantiated.");
+                        UnityEngine.Debug.Log("🧠 Hard AI (placeholder) instantiated.");
                         break;
                 }
             }
@@ -165,16 +167,16 @@ public class GameSetupManager : MonoBehaviour
 
 
         // 🎯 רנדומיזציה: מי יתחיל את המשחק, שחקן או AI?
-        bool playerStarts = Random.Range(0, 2) == 0;
+        bool playerStarts = UnityEngine.Random.Range(0, 2) == 0;
 
         if (playerStarts)
         {
-            Debug.Log("🎯 Player 1 starts the game!");
+            UnityEngine.Debug.Log("🎯 Player 1 starts the game!");
             TurnManager.Instance?.StartPlayerTurn(); // מפעיל תור שחקן כולל טיימר
         }
         else
         {
-            Debug.Log("🤖 AI starts the game!");
+            UnityEngine.Debug.Log("🤖 AI starts the game!");
             TurnManager.Instance?.StartAITurn(); // מפעיל תור AI כולל טיימר
         }
     }
@@ -197,7 +199,7 @@ public class GameSetupManager : MonoBehaviour
 
         while (kinds.Count < total)
         {
-            kinds.Add((RPSUnit.RPSKind)Random.Range(0, 3));
+            kinds.Add((RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3));
         }
 
         Shuffle(kinds);
@@ -213,7 +215,7 @@ public class GameSetupManager : MonoBehaviour
     {
         for (int i = 0; i < list.Count; i++)
         {
-            int rand = Random.Range(i, list.Count);
+            int rand = UnityEngine.Random.Range(i, list.Count);
             (list[i], list[rand]) = (list[rand], list[i]);
         }
     }
