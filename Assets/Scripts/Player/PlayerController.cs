@@ -2,12 +2,12 @@
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Diagnostics;
+using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
     private RPSUnit selectedUnit;
     private Outline activeOutline;
-    public GameObject playAgainContainer;
     public int columns = 7;
     public int rows = 6;
     public int myPlayerId = 1;
@@ -22,14 +22,18 @@ public class PlayerController : MonoBehaviour
     {
         if (selectedUnit != null)
         {
-            TryMoveUnit(selectedUnit, direction);
+            StartCoroutine(HandleJumpAndMove(selectedUnit, direction));
         }
+    }
+
+    void Start()
+    {
+        gameEnded = false;
     }
 
     void Update()
     {
-        if (gameEnded)
-            return;
+        if (gameEnded) return;
 
         if (TurnManager.Instance == null) return;
         if (!TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
@@ -37,8 +41,10 @@ public class PlayerController : MonoBehaviour
         if (selectedUnit == null) return;
         if (!selectedUnit.IsMovable()) return;
 
+        // Support for both keyboard and touch/click input
         Vector2Int direction = Vector2Int.zero;
 
+        // Arrow key movement
         if (Input.GetKeyDown(KeyCode.UpArrow)) direction = Vector2Int.down;
         else if (Input.GetKeyDown(KeyCode.DownArrow)) direction = Vector2Int.up;
         else if (Input.GetKeyDown(KeyCode.LeftArrow)) direction = Vector2Int.left;
@@ -66,22 +72,73 @@ public class PlayerController : MonoBehaviour
         if (TurnManager.Instance == null || !TurnManager.Instance.IsPlayerTurn(myPlayerId)) return;
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive()) return;
 
+        // Clear previous selection
+        ClearSelection();
+
         selectedUnit = unit;
         UnityEngine.Debug.Log($"🎯 Selected unit at [col {unit.Position.x}, row {unit.Position.y}]");
 
-        if (activeOutline != null)
-            Destroy(activeOutline);
-
+        // Add outline to selected unit
         Outline outline = unit.gameObject.AddComponent<Outline>();
         outline.effectColor = Color.cyan;
         outline.effectDistance = new Vector2(5f, 5f);
         activeOutline = outline;
+
+        // Highlight valid move tiles
+        HighlightValidMoveTiles();
+    }
+
+    private void HighlightValidMoveTiles()
+    {
+        if (selectedUnit == null) return;
+
+        Vector2Int[] directions = new Vector2Int[]
+        {
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
+
+        foreach (Vector2Int dir in directions)
+        {
+            Vector2Int targetPos = selectedUnit.Position + dir;
+            if (IsValidMovePosition(targetPos))
+            {
+                Transform tile = GetTileTransform(targetPos);
+                if (tile != null)
+                {
+                    // Add a subtle highlight effect
+                    var highlight = tile.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    highlight.effectColor = new Color(0.5f, 1f, 0.5f, 0.5f);
+                    highlight.effectDistance = new Vector2(2f, 2f);
+                }
+            }
+        }
+    }
+
+    private bool IsValidMovePosition(Vector2Int pos)
+    {
+        if (pos.x < 0 || pos.x >= columns || pos.y < 0 || pos.y >= rows)
+            return false;
+
+        return true;
     }
 
     public void ClearSelection()
     {
+        // Clear unit outline
         if (activeOutline != null)
             Destroy(activeOutline);
+        
+        // Clear tile highlights
+        foreach (Transform tile in GameObject.Find("Board").transform)
+        {
+            var highlight = tile.GetComponent<UnityEngine.UI.Outline>();
+            if (highlight != null)
+                Destroy(highlight);
+        }
+
         selectedUnit = null;
     }
 
@@ -126,18 +183,18 @@ public class PlayerController : MonoBehaviour
 
                 if (other.role == RPSUnit.UnitRole.Flag)
                 {
-                    UnityEngine.Debug.Log("🎯 You captured the enemy FLAG!");
-
+                    UnityEngine.Debug.Log("🎯 You captured the enemy FLAG! YOU WIN!");
                     other.Reveal();
                     MoveUnitTo(unit, target);
                     Destroy(other.gameObject);
                     ClearSelection();
                     gameEnded = true;
-                    if (playAgainContainer != null)
-                    {
-                        playAgainContainer.SetActive(true);
-                    }
-
+                    
+                    // Set player as winner
+                    TurnTimerManager.Instance?.SetPlayerWon(true);
+                    
+                    // Stop all game systems
+                    TurnManager.Instance?.StopGame();
                     return;
                 }
 
@@ -177,12 +234,14 @@ public class PlayerController : MonoBehaviour
                 if (unit.Beats(other))
                 {
                     UnityEngine.Debug.Log("✅ Attacker wins – replacing enemy");
+                    BoardManager.Instance.RemoveUnit(other);
                     Destroy(other.gameObject);
                     MoveUnitTo(unit, target);
                 }
                 else
                 {
                     UnityEngine.Debug.Log("❌ Attacker loses – removed");
+                    BoardManager.Instance.RemoveUnit(unit);
                     Destroy(unit.gameObject);
                 }
 
@@ -249,6 +308,7 @@ public class PlayerController : MonoBehaviour
     {
         PlayerController.gameEnded = false;
 
+        // Destroy all managers to start fresh
         TurnTimerManager timer = FindObjectOfType<TurnTimerManager>();
         if (timer != null) Destroy(timer.gameObject);
 
@@ -261,6 +321,7 @@ public class PlayerController : MonoBehaviour
         BoardManager bm = FindObjectOfType<BoardManager>();
         if (bm != null) Destroy(bm.gameObject);
 
+        // Reload the scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 

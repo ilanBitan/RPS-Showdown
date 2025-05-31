@@ -2,158 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class AIPlayerMediumController : AIPlayerController
 {
-    private Dictionary<Vector2Int, RPSUnit.RPSKind> revealedEnemies = new();
+    private Dictionary<Vector2Int, RPSUnit.RPSKind> revealedEnemies = new Dictionary<Vector2Int, RPSUnit.RPSKind>();
     private HashSet<Vector2Int> knownTraps = new HashSet<Vector2Int>();
-
-
-    /*    protected override IEnumerator PerformAIAction()
-        {
-            if (PlayerController.gameEnded || !TurnManager.Instance.IsPlayerTurn(2))
-                yield break;
-
-            yield return new WaitForSeconds(0.5f);
-            Debug.Log("🤖 [Medium AI] Thinking...");
-
-            List<RPSUnit> allUnits = FindObjectsOfType<RPSUnit>().ToList();
-            List<RPSUnit> aiUnits = allUnits
-                .Where(u => u.playerId == 2 && u.IsMovable())
-                .OrderBy(_ => Random.value) // ✅ רנדומליות
-                .ToList();
-            List<RPSUnit> enemyUnits = allUnits.Where(u => u.playerId == 1).ToList();
-
-            foreach (var enemy in enemyUnits)
-            {
-                if (enemy.IsRevealed && !revealedEnemies.ContainsKey(enemy.Position))
-                    revealedEnemies[enemy.Position] = enemy.Kind;
-            }
-
-            // ננסה עבור כל יחידה (בסדר רנדומלי)
-            foreach (var unit in aiUnits)
-            {
-                var validMoves = GetValidMoves(unit);
-
-                // 1. תקוף אויבים נחשפים שחלשים ממך
-                foreach (var move in validMoves)
-                {
-                    var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
-                    if (enemy != null && enemy.playerId != unit.playerId && enemy.IsRevealed && unit.Beats(enemy))
-                    {
-                        Debug.Log($"⚔️ {unit.name} attacking revealed weaker enemy at {move}");
-                        ExecuteMove(unit, move);
-                        yield break;
-                    }
-                }
-
-                // 2. הימנע מקרב מול אויבים נחשפים שיכולים להביס אותך
-                // 3. אם אין ברירה – תקוף אויב מוסתר
-                foreach (var move in validMoves)
-                {
-                    var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
-                    if (enemy != null && enemy.playerId != unit.playerId)
-                    {
-                        if (enemy.IsRevealed && enemy.Beats(unit))
-                        {
-                            // ננסה לברוח – חפש מהלך שמרחיק מהאויב
-                            var escapeMoves = GetValidMoves(unit)
-                                .Where(m => BoardManager.Instance.GetUnitAt(m) == null)
-                                .OrderByDescending(m => Distance(m, enemy.Position))
-                                .ToList();
-
-                            if (escapeMoves.Any())
-                            {
-                                var escape = escapeMoves.First();
-                                Debug.Log($"🏃 {unit.name} escaping to {escape} away from enemy at {move}");
-                                ExecuteMove(unit, escape);
-                                yield break;
-                            }
-
-                            continue; // אין לאן לברוח
-                        }
-
-                        if (!enemy.IsRevealed)
-                        {
-                            Debug.Log($"❔ {unit.name} attacking unknown enemy at {move}");
-                            ExecuteMove(unit, move);
-                            yield break;
-                        }
-                    }
-                }
-                // 3.5: אם האויב נחשף אבל לא חזק ממני – עדיף לנסות דו קרב
-                foreach (var move in validMoves)
-                {
-                    var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
-                    if (enemy != null && enemy.playerId != unit.playerId && enemy.IsRevealed)
-                    {
-                        if (!enemy.Beats(unit) && !unit.Beats(enemy)) // תיקו R=R
-                        {
-                            if (Distance(unit.Position, move) == 1) // ⚠️ רק אם הם צמודים
-                            {
-                                Debug.Log($"🤝 {unit.name} starting tie battle with {enemy.name} at {move}");
-                                BattleManager.Instance?.StartBattle(unit, enemy, move);
-                                yield break;
-                            }
-                        }
-                    }
-                }
-
-
-
-                // 4. תזוזה חכמה לכיוון ממוצע האויבים
-                Vector2Int bestMove = unit.Position;
-                int bestDistance = Distance(unit.Position, GetEnemyAveragePosition(enemyUnits));
-
-                foreach (var move in validMoves.OrderBy(m => Random.value))
-                {
-                    if (BoardManager.Instance.GetUnitAt(move) == null)
-                    {
-                        int newDistance = Distance(move, GetEnemyAveragePosition(enemyUnits));
-                        if (newDistance < bestDistance)
-                        {
-                            bestMove = move;
-                            bestDistance = newDistance;
-                        }
-                    }
-                }
-
-                if (bestMove != unit.Position)
-                {
-                    Debug.Log($"🚶 {unit.name} moving toward enemy cluster: {bestMove}");
-                    ExecuteMove(unit, bestMove);
-                    yield break;
-                }
-            }
-
-            // 5. רק F ו־T נותרו – ננסה לתקוף אחד
-            if (enemyUnits.Count <= 2 && enemyUnits.All(e => !e.IsRevealed))
-            {
-                foreach (var unit in aiUnits)
-                {
-                    foreach (var move in GetValidMoves(unit))
-                    {
-                        var potential = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
-                        if (potential != null && potential.playerId != unit.playerId)
-                        {
-                            Debug.Log("🎯 Only unrevealed enemies remain – taking a risk.");
-                            ExecuteMove(unit, move);
-                            yield break;
-                        }
-                    }
-                }
-            }
-
-            Debug.Log("🤷 No smart moves available, ending turn.");
-            TurnManager.Instance?.EndTurn();
-        }
-    */
-
 
     protected override IEnumerator PerformAIAction()
     {
         if (PlayerController.gameEnded || !TurnManager.Instance.IsPlayerTurn(2))
+        {
+            Debug.Log("🛑 Game ended or not AI's turn - AI stops.");
             yield break;
+        }
 
         yield return new WaitForSeconds(0.5f);
         Debug.Log("🤖 [Medium AI] Thinking...");
@@ -163,262 +26,270 @@ public class AIPlayerMediumController : AIPlayerController
             .Where(u => u.playerId == 2 && u.IsMovable())
             .OrderBy(_ => Random.value)
             .ToList();
+
+        if (aiUnits.Count == 0)
+        {
+            Debug.Log("🤖 No movable units. Ending turn.");
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
         List<RPSUnit> enemyUnits = allUnits.Where(u => u.playerId == 1).ToList();
 
+        // עדכון מידע על יחידות שנחשפו
         foreach (var enemy in enemyUnits)
         {
             if (enemy.IsRevealed && !revealedEnemies.ContainsKey(enemy.Position))
                 revealedEnemies[enemy.Position] = enemy.Kind;
         }
 
-        // 🧠 דירוג מהלכים: נמוך = חשוב יותר
+        // מציאת המהלך הטוב ביותר
+        var bestMove = FindBestMove(aiUnits, enemyUnits);
+        
+        if (bestMove.HasValue)
+        {
+            var (unit, target) = bestMove.Value;
+            yield return StartCoroutine(ExecuteMoveSequence(unit, target));
+        }
+        else
+        {
+            Debug.Log("🤖 No valid moves found. Ending turn.");
+            TurnManager.Instance?.EndTurn();
+        }
+    }
+
+    private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
+    {
+        var enemyUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
+
+        // בדיקה שהמהלך חוקי - רק צעד אחד
+        Vector2Int delta = target - unit.Position;
+        if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
+        {
+            Debug.Log($"🚫 Invalid move: {unit.name} tried to move more than one step from {unit.Position} to {target}");
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        if (enemyUnit == null)
+        {
+            // תזוזה למשבצת ריקה
+            Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
+            unit.MoveTo(target);
+            yield return new WaitForSeconds(0.6f);
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
+        if (enemyUnit.Position != target)
+        {
+            Debug.Log($"🚫 Cannot attack: Target unit is at {enemyUnit.Position} but move is to {target}");
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        // חשיפת יחידות בקרב
+        unit.Reveal();
+        enemyUnit.Reveal();
+
+        if (enemyUnit.role == RPSUnit.UnitRole.Trap)
+        {
+            Debug.Log($"💥 {unit.name} stepped on trap!");
+            knownTraps.Add(target);
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        if (enemyUnit.role == RPSUnit.UnitRole.Flag)
+        {
+            Debug.Log($"🎯 {unit.name} captured the FLAG! YOU LOSE!");
+            BoardManager.Instance.RemoveUnit(enemyUnit);
+            Destroy(enemyUnit.gameObject);
+            unit.MoveTo(target);
+            PlayerController.gameEnded = true;
+            
+            // Set player as loser
+            TurnTimerManager.Instance?.SetPlayerWon(false);
+            
+            // Stop all game systems
+            TurnManager.Instance?.StopGame();
+            yield break;
+        }
+
+        if (unit.Kind == enemyUnit.Kind)
+        {
+            Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemyUnit.name} at {target}");
+            BattleManager.Instance?.StartBattle(unit, enemyUnit, target);
+            yield break;
+        }
+
+        if (unit.Beats(enemyUnit))
+        {
+            Debug.Log($"🏆 {unit.name} wins! {unit.Kind} beats {enemyUnit.Kind}");
+            BoardManager.Instance.RemoveUnit(enemyUnit);
+            Destroy(enemyUnit.gameObject);
+            unit.MoveTo(target);
+            yield return new WaitForSeconds(0.6f);
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        if (enemyUnit.Beats(unit))
+        {
+            Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemyUnit.Kind} beats {unit.Kind}");
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
+            TurnManager.Instance?.EndTurn();
+            yield break;
+        }
+
+        // במקרה שמשהו השתבש, נסיים את התור
+        Debug.Log("🔄 Unexpected case - ending turn");
+        TurnManager.Instance?.EndTurn();
+    }
+
+    private (RPSUnit unit, Vector2Int target)? FindBestMove(List<RPSUnit> aiUnits, List<RPSUnit> enemyUnits)
+    {
         var priorityMoves = new List<(int priority, RPSUnit unit, Vector2Int move)>();
 
         foreach (var unit in aiUnits)
         {
-            foreach (var dir in new[] { Vector2Int.down, Vector2Int.up, Vector2Int.left, Vector2Int.right })
+            var validMoves = GetAdjacentMoves(unit);
+            foreach (var move in validMoves)
             {
-                Vector2Int target = unit.Position + dir;
-                if (!BoardManager.Instance.IsInsideBoard(target)) continue;
-
-                var enemy = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
-                if (enemy == null || enemy.playerId == unit.playerId) continue;
-
-                if (enemy.IsRevealed)
+                var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
+                if (enemy == null)
                 {
-                    if (unit.Beats(enemy))        // ⚔️ שלב 1 – נצחון בטוח
-                        priorityMoves.Add((1, unit, target));
+                    // בדיקה אם המהלך מקרב אותנו ליחידה לא חשופה
+                    var nearestUnrevealed = enemyUnits
+                        .Where(e => !e.IsRevealed)
+                        .OrderBy(e => Vector2Int.Distance(e.Position, unit.Position))
+                        .FirstOrDefault();
 
-                    else if (enemy.Beats(unit))   // 🧠 שלב 2 – בריחה חכמה עם ראייה קדימה
+                    if (nearestUnrevealed != null)
                     {
-                        var escapeOptions = GetValidMoves(unit)
-                            .Where(m => BoardManager.Instance.GetUnitAt(m) == null)
-                            .OrderByDescending(m => Distance(m, enemy.Position))
-                            .ToList();
-
-                        foreach (var escape in escapeOptions)
+                        float currentDist = Vector2Int.Distance(unit.Position, nearestUnrevealed.Position);
+                        float newDist = Vector2Int.Distance(move, nearestUnrevealed.Position);
+                        if (newDist < currentDist)
                         {
-                            // סרוק סביבת היעד (המשבצת שנברח אליה)
-                            foreach (var dir2 in new[] { Vector2Int.down, Vector2Int.up, Vector2Int.left, Vector2Int.right })
-                            {
-                                Vector2Int lookAhead = escape + dir2;
-                                if (!BoardManager.Instance.IsInsideBoard(lookAhead)) continue;
-
-                                var possibleEnemy = BoardManager.Instance.GetUnitAt(lookAhead) as RPSUnit;
-                                if (possibleEnemy != null && possibleEnemy.playerId == 1)
-                                {
-                                    // אם זו מלכודת ידועה – אל תתקרב
-                                    if (knownTraps.Contains(lookAhead)) continue;
-
-                                    // יש סיכוי לתקוף – או אם היריב מוסתר או חלש
-                                    if (!possibleEnemy.IsRevealed || unit.Beats(possibleEnemy) ||
-                                        (!unit.Beats(possibleEnemy) && !possibleEnemy.Beats(unit)))
-                                    {
-                                        priorityMoves.Add((2, unit, escape)); // בריחה עם פוטנציאל תקיפה
-                                        goto EndEscapeLoop;
-                                    }
-                                }
-                            }
-                        }
-
-                        // fallback: אין יעד חכם? ברח הכי רחוק
-                        if (escapeOptions.Any())
-                            priorityMoves.Add((2, unit, escapeOptions.First()));
-
-                        EndEscapeLoop:;
-                    }
-
-
-                    else                          // 🤝 שלב 3 – תיקו
-                        priorityMoves.Add((3, unit, target));
-                }
-                else                              // ❔ שלב 4 – אויב מוסתר
-                {
-                    if (!knownTraps.Contains(target))
-                        priorityMoves.Add((4, unit, target));
-                }
-            }
-        }
-
-        if (priorityMoves.Any())
-        {
-            var chosen = priorityMoves.OrderBy(p => p.priority).First();
-            Debug.Log($"✅ Best priority {chosen.priority} – {chosen.unit.name} moves to {chosen.move}");
-            ExecuteMove(chosen.unit, chosen.move);
-            yield break;
-        }
-
-        // 🎯 שלב 5 – אם נשארו רק F ו־T
-        if (enemyUnits.Count <= 2 && enemyUnits.All(e => !e.IsRevealed))
-        {
-            var allMoves = new List<(RPSUnit unit, Vector2Int move, int dist)>();
-            foreach (var unit in aiUnits)
-            {
-                foreach (var move in GetValidMoves(unit))
-                {
-                    var potential = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
-                    if (potential != null && potential.playerId != unit.playerId)
-                    {
-                        int dist = Distance(unit.Position, move);
-                        allMoves.Add((unit, move, dist));
-                    }
-                }
-            }
-            if (allMoves.Any())
-            {
-                var target = allMoves.OrderBy(t => t.dist).First();
-                Debug.Log("🎯 Trying unrevealed target – possible F or T.");
-                ExecuteMove(target.unit, target.move);
-                yield break;
-            }
-        }
-
-        // 🧠 שלב 6 – תנועה חכמה עם חיזוי תוצאה בתור הבא
-        var moveOptions = new List<(int rank, RPSUnit unit, Vector2Int move)>();
-
-        foreach (var unit in aiUnits)
-        {
-            foreach (var move in GetValidMoves(unit).Where(m => BoardManager.Instance.GetUnitAt(m) == null))
-            {
-                // נניח שהיחידה עברה לשם – נבדוק מה קורה בתור הבא
-                bool willWinNext = false;
-                bool willDrawNext = false;
-                bool willMeetUnknown = false;
-                bool willDie = false;
-
-                foreach (var dir in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
-                {
-                    Vector2Int nextPos = move + dir;
-                    if (!BoardManager.Instance.IsInsideBoard(nextPos)) continue;
-
-                    var neighbor = BoardManager.Instance.GetUnitAt(nextPos) as RPSUnit;
-                    if (neighbor != null && neighbor.playerId != unit.playerId)
-                    {
-                        if (neighbor.IsRevealed)
-                        {
-                            if (unit.Beats(neighbor)) willWinNext = true;
-                            else if (neighbor.Beats(unit)) willDie = true;
-                            else if (unit.Kind == neighbor.Kind) willDrawNext = true;
+                            priorityMoves.Add((4, unit, move));
                         }
                         else
                         {
-                            willMeetUnknown = true;
+                            // גם תזוזה למשבצת ריקה היא אופציה, אבל בעדיפות נמוכה
+                            priorityMoves.Add((5, unit, move));
+                        }
+                    }
+                    else
+                    {
+                        // אם אין יחידות לא חשופות, כל תזוזה חוקית היא אופציה
+                        priorityMoves.Add((5, unit, move));
+                    }
+                    continue;
+                }
+
+                if (enemy.playerId == unit.playerId)
+                    continue;
+
+                // וידוא שהיחידה שאנחנו רוצים לתקוף נמצאת בדיוק במיקום שאליו אנחנו זזים
+                if (enemy.Position != move)
+                {
+                    // אם זה לא מהלך תקיפה חוקי, ננסה לזוז למשבצת הזו אם היא ריקה
+                    if (BoardManager.Instance.GetUnitAt(move) == null)
+                    {
+                        priorityMoves.Add((5, unit, move));
+                    }
+                    continue;
+                }
+
+                // בדיקת מלכודת או דגל - עדיפות הכי גבוהה (1)
+                if (enemy.role == RPSUnit.UnitRole.Trap || enemy.role == RPSUnit.UnitRole.Flag)
+                {
+                    if (!knownTraps.Contains(move))
+                        priorityMoves.Add((1, unit, move));
+                    continue;
+                }
+
+                // בדיקת קרב
+                if (enemy.IsRevealed)
+                {
+                    if (unit.Beats(enemy))
+                        // ניצחון בטוח - עדיפות הכי גבוהה (1)
+                        priorityMoves.Add((1, unit, move));
+                    else if (unit.Kind == enemy.Kind)
+                        // תיקו - עדיפות שנייה (2)
+                        priorityMoves.Add((2, unit, move));
+                }
+                else
+                {
+                    // תקיפת יחידה לא ידועה - עדיפות שלישית (3)
+                    priorityMoves.Add((3, unit, move));
+                }
+            }
+        }
+
+        // אם מצאנו מהלכים עם עדיפות, נבחר את הטוב ביותר
+        if (priorityMoves.Count > 0)
+        {
+            var bestMove = priorityMoves.OrderBy(m => m.priority).First();
+            UnityEngine.Debug.Log($"🎯 Best move found - Priority {bestMove.priority}: {bestMove.unit.name} to {bestMove.move}");
+            return (bestMove.unit, bestMove.move);
+        }
+
+        // אם לא מצאנו מהלכים עם עדיפות, נחפש את היחידה הכי קרובה ליחידה לא חשופה
+        var unrevealedEnemies = enemyUnits.Where(e => !e.IsRevealed).ToList();
+        if (unrevealedEnemies.Any())
+        {
+            var bestMove = (unit: (RPSUnit)null, move: Vector2Int.zero, distance: float.MaxValue);
+            
+            foreach (var enemy in unrevealedEnemies)
+            {
+                foreach (var unit in aiUnits)
+                {
+                    var moves = GetAdjacentMoves(unit)
+                        .Where(m => BoardManager.Instance.GetUnitAt(m) == null) // רק משבצות ריקות
+                        .ToList();
+
+                    foreach (var move in moves)
+                    {
+                        float distAfterMove = Vector2Int.Distance(move, enemy.Position);
+                        if (distAfterMove < bestMove.distance)
+                        {
+                            bestMove = (unit, move, distAfterMove);
                         }
                     }
                 }
+            }
 
-                if (willWinNext)
-                    moveOptions.Add((1, unit, move));
-                else if (willDrawNext)
-                    moveOptions.Add((2, unit, move));
-                else if (willMeetUnknown)
-                    moveOptions.Add((3, unit, move));
-                else if (!willDie)
-                    moveOptions.Add((4, unit, move));
-                else
-                    moveOptions.Add((5, unit, move)); // צעד גרוע – מוות בטוח
+            if (bestMove.unit != null)
+            {
+                UnityEngine.Debug.Log($"Moving {bestMove.unit.name} towards closest unrevealed enemy");
+                return (bestMove.unit, bestMove.move);
             }
         }
 
-        // אם מצאנו משהו טוב יותר ממוות
-        if (moveOptions.Any(m => m.rank < 5))
-        {
-            var best = moveOptions.OrderBy(m => m.rank).First();
-            Debug.Log($"🤖 Smart move rank {best.rank} → {best.unit.name} moves to {best.move}");
-            ExecuteMove(best.unit, best.move);
-            yield break;
-        }
-
-
-        // ❌ לא נמצאו מהלכים חכמים
-        Debug.Log("🤷 No smart moves available, ending turn.");
-        TurnManager.Instance?.EndTurn();
+        // זה לא אמור לקרות כי תמיד יש לפחות את הדגל שלא חשוף
+        UnityEngine.Debug.Log("Warning: No possible moves found - this should not happen!");
+        return null;
     }
 
-    protected override void ExecuteMove(RPSUnit unit, Vector2Int target)
+    private bool IsGoodEmptyMove(RPSUnit unit, Vector2Int move, List<RPSUnit> enemies)
     {
-        var enemyUnit = BoardManager.Instance.GetUnitAt(target);
-        var enemy = enemyUnit as RPSUnit;
+        // בדיקה אם המהלך מקרב אותנו לאויב
+        var nearestEnemy = enemies
+            .OrderBy(e => Vector2Int.Distance(e.Position, unit.Position))
+            .FirstOrDefault();
 
-        if (enemy != null)
+        if (nearestEnemy != null)
         {
-            unit.Reveal();
-            enemy.Reveal();
-
-            if (enemy.role == RPSUnit.UnitRole.Trap)
-            {
-                Debug.Log($"💥 {unit.name} stepped on a TRAP at {target} and was destroyed");
-
-                knownTraps.Add(target); // נשמר למניעת חזרה בעתיד
-
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-                TurnManager.Instance?.EndTurn();
-                return;
-            }
-
-            if (enemy.role == RPSUnit.UnitRole.Flag)
-            {
-                Debug.Log($"🎯 {unit.name} captured the FLAG at {target}");
-
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-
-                PlayerController.gameEnded = true;
-                return;
-            }
-
-            if (unit.Kind == enemy.Kind)
-            {
-                Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemy.name} at {target}");
-                BattleManager.Instance?.StartBattle(unit, enemy, target);
-                return;
-            }
-
-            if (unit.Beats(enemy))
-            {
-                Debug.Log($"🏆 {unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
-
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-            }
-            else
-            {
-                Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
-
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-            }
-        }
-        else
-        {
-            Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
-            unit.TryMove(target - unit.Position);
+            float currentDist = Vector2Int.Distance(unit.Position, nearestEnemy.Position);
+            float newDist = Vector2Int.Distance(move, nearestEnemy.Position);
+            return newDist < currentDist;
         }
 
-        TurnManager.Instance?.EndTurn();
-    }
-
-
-    private int Distance(Vector2Int a, Vector2Int b)
-    {
-        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
-    }
-
-    private Vector2Int GetEnemyAveragePosition(List<RPSUnit> enemies)
-    {
-        if (enemies.Count == 0) return new Vector2Int(3, 0);
-
-        int xSum = 0, ySum = 0;
-        foreach (var e in enemies)
-        {
-            xSum += e.Position.x;
-            ySum += e.Position.y;
-        }
-        return new Vector2Int(xSum / enemies.Count, ySum / enemies.Count);
+        return true;
     }
 }

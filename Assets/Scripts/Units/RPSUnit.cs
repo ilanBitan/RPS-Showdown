@@ -41,6 +41,9 @@ public class RPSUnit : Unit
         {
             UpdateVisual();
         }
+
+        // Make sure all units are selectable during gameplay
+        EnableSetupSelection();
     }
 
     public override bool Beats(Unit other)
@@ -149,16 +152,73 @@ public class RPSUnit : Unit
 
     public void EnableSetupSelection()
     {
-        var clickable = GetComponent<SelectableUnit>();
-        if (clickable != null)
-            clickable.onSetupClick = () => GameSetupManager.Instance.OnUnitClicked(this);
+        SelectableUnit selectable = GetComponent<SelectableUnit>();
+        if (selectable == null)
+            selectable = gameObject.AddComponent<SelectableUnit>();
+
+        selectable.onSetupClick = () =>
+        {
+            // During setup phase
+            if (GameSetupManager.Instance != null && !GameSetupManager.Instance.IsSetupComplete())
+            {
+                GameSetupManager.Instance.OnUnitClicked(this);
+                return;
+            }
+
+            // During gameplay
+            PlayerController playerController = FindObjectOfType<PlayerController>();
+            if (playerController == null) return;
+
+            // If it's not player's turn, ignore
+            if (!TurnManager.Instance.IsPlayerTurn(1)) 
+            {
+                UnityEngine.Debug.Log("⏳ Wait for your turn.");
+                return;
+            }
+
+            // If there's a battle active, ignore
+            if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive())
+            {
+                UnityEngine.Debug.Log("⚔️ Battle in progress – cannot move now.");
+                return;
+            }
+
+            // If this is a player unit
+            if (IsPlayerControlled)
+            {
+                playerController.SelectUnit(this);
+                return;
+            }
+
+            // If this is an AI unit
+            RPSUnit selectedUnit = playerController.SelectedUnit;
+            if (selectedUnit != null)
+            {
+                // Calculate if this unit is adjacent to the selected unit
+                Vector2Int direction = Position - selectedUnit.Position;
+                bool isAdjacent = Mathf.Abs(direction.x) + Mathf.Abs(direction.y) == 1;
+
+                if (isAdjacent)
+                {
+                    // Try to attack this unit
+                    selectedUnit.TryMove(direction);
+                }
+                else
+                {
+                    UnityEngine.Debug.Log("🚫 Can't attack - unit is too far away.");
+                    playerController.ClearSelection();
+                }
+            }
+        };
     }
 
     public void DisableSetupSelection()
     {
-        var clickable = GetComponent<SelectableUnit>();
-        if (clickable != null)
-            clickable.onSetupClick = null;
+        SelectableUnit selectable = GetComponent<SelectableUnit>();
+        if (selectable != null)
+        {
+            selectable.onSetupClick = null;
+        }
     }
 
     public bool IsMovable()
@@ -310,7 +370,16 @@ public class RPSUnit : Unit
         transform.SetParent(targetTile, false);
         rt.anchoredPosition = Vector2.zero;
 
+        // Make sure the board state is updated
+        BoardManager.Instance.PlaceUnit(this, targetGridPos);
+
         UnityEngine.Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+
+        // Only end turn if this is a player-controlled unit and not in battle
+        if (IsPlayerControlled && !BattleManager.Instance.IsBattleActive())
+        {
+            TurnManager.Instance?.EndTurn();
+        }
     }
 
     public bool IsEnemy(RPSUnit other)

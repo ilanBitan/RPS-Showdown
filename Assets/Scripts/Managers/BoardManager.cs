@@ -11,6 +11,7 @@ public class BoardManager : MonoBehaviour
     public RectTransform[,] tiles;
 
     private Unit[,] unitGrid;
+    private float tileSize;
 
     public static BoardManager Instance;
 
@@ -24,6 +25,23 @@ public class BoardManager : MonoBehaviour
         tiles = new RectTransform[rows, columns];
         unitGrid = new Unit[columns, rows]; // לוגי: [x, y] → [col, row]
 
+        // Force the board to stretch
+        RectTransform boardRect = boardParent.GetComponent<RectTransform>();
+        boardRect.anchorMin = new Vector2(0, 0);
+        boardRect.anchorMax = new Vector2(1, 1);
+        boardRect.offsetMin = Vector2.zero;
+        boardRect.offsetMax = Vector2.zero;
+
+        // Calculate tile size based on container width
+        float containerWidth = boardRect.rect.width;
+        tileSize = containerWidth / columns;
+
+        // Calculate total height needed
+        float totalHeight = tileSize * rows;
+
+        // Calculate vertical offset to center the board
+        float verticalOffset = (boardRect.rect.height - totalHeight) / 2;
+
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < columns; col++)
@@ -33,8 +51,14 @@ public class BoardManager : MonoBehaviour
                 RectTransform rt = tile.GetComponent<RectTransform>();
                 tiles[row, col] = rt;
 
-                rt.anchoredPosition = new Vector2(col * 100, -row * 100);
-                rt.sizeDelta = new Vector2(100, 100);
+                // Position tiles to fill width and center vertically
+                rt.anchorMin = new Vector2(0, 1);
+                rt.anchorMax = new Vector2(0, 1);
+                rt.sizeDelta = new Vector2(tileSize, tileSize);
+                rt.anchoredPosition = new Vector2(
+                    col * tileSize + (tileSize / 2),
+                    -verticalOffset - (row * tileSize) - (tileSize / 2)
+                );
 
                 // Initialize the Tile component's Position
                 Tile tileComponent = tile.GetComponent<Tile>();
@@ -71,8 +95,6 @@ public class BoardManager : MonoBehaviour
         Debug.Log($"📌 [BoardManager] Placed unit {unit.name} at [col {pos.x}, row {pos.y}]");
     }
 
-
-
     public void MoveUnit(Unit unit, Vector2Int newPos)
     {
         Vector2Int oldPos = unit.Position;
@@ -88,10 +110,18 @@ public class BoardManager : MonoBehaviour
         if (unit == null) return;
 
         Vector2Int pos = unit.Position;
-        if (IsInsideBoard(pos) && unitGrid[pos.x, pos.y] == unit)
+        if (IsInsideBoard(pos))
         {
-            unitGrid[pos.x, pos.y] = null;
-            Debug.Log($"🗑️ Removed unit from [col {pos.x}, row {pos.y}]");
+            if (unitGrid[pos.x, pos.y] == unit)
+            {
+                unitGrid[pos.x, pos.y] = null;
+                Debug.Log($"🗑️ Removed unit from [col {pos.x}, row {pos.y}]");
+            }
+            else if (unitGrid[pos.x, pos.y] != null)
+            {
+                Debug.Log($"⚠️ Warning: Unit at [col {pos.x}, row {pos.y}] doesn't match the unit being removed");
+                unitGrid[pos.x, pos.y] = null;
+            }
         }
     }
 
@@ -106,6 +136,7 @@ public class BoardManager : MonoBehaviour
         if (!IsInsideBoard(pos)) return null;
         return tiles[pos.y, pos.x];
     }
+
     public void SwapUnits(Vector2Int posA, Vector2Int posB)
     {
         if (!IsInsideBoard(posA) || !IsInsideBoard(posB)) return;
@@ -135,5 +166,4 @@ public class BoardManager : MonoBehaviour
 
         Debug.Log($"🔁 Swapped units {unitA.name} and {unitB.name} between {posA} and {posB}");
     }
-
 }

@@ -178,30 +178,30 @@ public class BattleManager : MonoBehaviour
         if (playerWins)
         {
             UnityEngine.Debug.Log("✅ Player wins the battle!");
-
+            BoardManager.Instance.RemoveUnit(aiUnit);
             Destroy(aiUnit.gameObject);
             playerUnit.MoveTo(targetPos);
+            EndBattle();
         }
         else if (aiWins)
         {
             UnityEngine.Debug.Log("❌ AI wins the battle!");
-
+            BoardManager.Instance.RemoveUnit(playerUnit);
             Destroy(playerUnit.gameObject);
             aiUnit.MoveTo(targetPos);
+            EndBattle();
         }
         else
         {
             UnityEngine.Debug.Log("🤝 Tie – rematch round!");
+            battlePanel?.SetActive(true);
             Invoke(nameof(ShowPlayerPanel), 0.5f);
             return;
         }
 
         foreach (var controller in FindObjectsOfType<PlayerController>())
             controller.ClearSelection();
-
-        EndBattle();
     }
-
 
     private void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {

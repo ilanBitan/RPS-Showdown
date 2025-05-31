@@ -157,7 +157,6 @@ public class GameSetupManager : MonoBehaviour
                         break;
 
                     case GameMode.PvE_Hard:
-                        // בהמשך תוכל להוסיף גם רמה קשה
                         aiObj.AddComponent<AIPlayerHardController>();
                         UnityEngine.Debug.Log("🧠 Hard AI (placeholder) instantiated.");
                         break;
@@ -165,22 +164,30 @@ public class GameSetupManager : MonoBehaviour
             }
         }
 
-
-        // 🎯 רנדומיזציה: מי יתחיל את המשחק, שחקן או AI?
+        // 🎲 רנדומיזציה: מי יתחיל את המשחק
         bool playerStarts = UnityEngine.Random.Range(0, 2) == 0;
 
         if (playerStarts)
         {
             UnityEngine.Debug.Log("🎯 Player 1 starts the game!");
-            TurnManager.Instance?.StartPlayerTurn(); // מפעיל תור שחקן כולל טיימר
+            TurnManager.Instance?.StartPlayerTurn();
         }
         else
         {
-            UnityEngine.Debug.Log("🤖 AI starts the game!");
-            TurnManager.Instance?.StartAITurn(); // מפעיל תור AI כולל טיימר
+            UnityEngine.Debug.Log("🤖 AI/Player 2 starts the game!");
+            TurnManager.Instance?.StartAITurn();
+            
+            // אם זה AI, נפעיל את התור שלו מיד
+            if (mode != GameMode.PvP)
+            {
+                AIPlayerController ai = FindObjectOfType<AIPlayerController>();
+                if (ai != null)
+                {
+                    ai.PlayTurn();
+                }
+            }
         }
     }
-
 
     private void AssignRandomRPS(List<RPSUnit> units)
     {

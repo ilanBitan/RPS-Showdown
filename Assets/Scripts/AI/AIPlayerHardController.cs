@@ -4,12 +4,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class AIPlayerHardController : AIPlayerController
 {
     private Dictionary<Vector2Int, RPSUnit.RPSKind> revealedEnemies = new();
     private HashSet<Vector2Int> knownTraps = new HashSet<Vector2Int>();
 
+    private struct AIMove
+    {
+        public int priority;
+        public RPSUnit unit;
+        public Vector2Int moveTarget;
+        public RPSUnit attackTarget;  // יחידה שאנחנו מתכננים לתקוף (אם יש)
+        public Vector2Int attackPos;   // המיקום של היחידה שאנחנו מתכננים לתקוף
+    }
 
     protected override IEnumerator PerformAIAction()
     {
@@ -17,7 +27,7 @@ public class AIPlayerHardController : AIPlayerController
             yield break;
 
         yield return new WaitForSeconds(0.5f);
-        UnityEngine.Debug.Log("[Medium AI] Thinking...");
+        UnityEngine.Debug.Log("[Hard AI] Thinking...");
 
         List<RPSUnit> allUnits = FindObjectsOfType<RPSUnit>().ToList();
         List<RPSUnit> aiUnits = allUnits
@@ -32,80 +42,168 @@ public class AIPlayerHardController : AIPlayerController
                 revealedEnemies[enemy.Position] = enemy.Kind;
         }
 
-        // Move priority ranking: lower = more important
-        var priorityMoves = new List<(int priority, RPSUnit unit, Vector2Int move)>();
+        var possibleMoves = new List<AIMove>();
 
         foreach (var unit in aiUnits)
         {
-            foreach (var dir in new[] { Vector2Int.down, Vector2Int.up, Vector2Int.left, Vector2Int.right })
+            var validMoves = GetAdjacentMoves(unit);
+            foreach (var moveTarget in validMoves)
             {
-                Vector2Int target = unit.Position + dir;
-                if (!BoardManager.Instance.IsInsideBoard(target)) continue;
-
-                var enemy = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
-                if (enemy == null || enemy.playerId == unit.playerId) continue;
-
-                if (enemy.IsRevealed)
+                var enemyAtTarget = BoardManager.Instance.GetUnitAt(moveTarget) as RPSUnit;
+                
+                // אם המיקום ריק או שיש שם יחידה שלנו
+                if (enemyAtTarget == null || enemyAtTarget.playerId == unit.playerId)
                 {
-                    if (unit.Beats(enemy))        // Stage 1 - Guaranteed win
-                        priorityMoves.Add((1, unit, target));
-
-                    else if (enemy.Beats(unit))   // Stage 2 - Smart escape with look ahead
+                    // בדיקה אם יש פוטנציאל התקפה טוב מהמיקום החדש
+                    bool hasGoodAttackPotential = false;
+                    foreach (var dir in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
                     {
-                        var escapeOptions = GetValidMoves(unit)
-                            .Where(m => BoardManager.Instance.GetUnitAt(m) == null)
-                            .OrderByDescending(m => Distance(m, enemy.Position))
-                            .ToList();
+                        Vector2Int adjacentPos = moveTarget + dir;
+                        if (!BoardManager.Instance.IsInsideBoard(adjacentPos)) continue;
 
-                        foreach (var escape in escapeOptions)
+                        var adjacentUnit = BoardManager.Instance.GetUnitAt(adjacentPos) as RPSUnit;
+                        if (adjacentUnit != null && adjacentUnit.playerId == 1)
                         {
-                            // Scan the target environment (the tile we'll escape to)
-                            foreach (var dir2 in new[] { Vector2Int.down, Vector2Int.up, Vector2Int.left, Vector2Int.right })
+                            if (!adjacentUnit.IsRevealed || unit.Beats(adjacentUnit) ||
+                                (!unit.Beats(adjacentUnit) && !adjacentUnit.Beats(unit)))
                             {
-                                Vector2Int lookAhead = escape + dir2;
-                                if (!BoardManager.Instance.IsInsideBoard(lookAhead)) continue;
-
-                                var possibleEnemy = BoardManager.Instance.GetUnitAt(lookAhead) as RPSUnit;
-                                if (possibleEnemy != null && possibleEnemy.playerId == 1)
-                                {
-                                    // If this is a known trap - don't approach
-                                    if (knownTraps.Contains(lookAhead)) continue;
-
-                                    // There's a chance to attack - either if the enemy is hidden or weak
-                                    if (!possibleEnemy.IsRevealed || unit.Beats(possibleEnemy) ||
-                                        (!unit.Beats(possibleEnemy) && !possibleEnemy.Beats(unit)))
-                                    {
-                                        priorityMoves.Add((2, unit, escape)); // Escape with attack potential
-                                        goto EndEscapeLoop;
-                                    }
-                                }
+                                hasGoodAttackPotential = true;
+                                break;
                             }
                         }
-
-                        // fallback: no smart destination? escape as far as possible
-                        if (escapeOptions.Any())
-                            priorityMoves.Add((2, unit, escapeOptions.First()));
-
-                        EndEscapeLoop:;
                     }
+                    
+                    if (hasGoodAttackPotential)
+                    {
+                        possibleMoves.Add(new AIMove 
+                        { 
+                            priority = 4, 
+                            unit = unit, 
+                            moveTarget = moveTarget,
+                            attackTarget = null,
+                            attackPos = Vector2Int.zero
+                        });
+                    }
+                    continue;
+                }
 
+                // מכאן והלאה זה מהלכי תקיפה
+                if (enemyAtTarget.IsRevealed)
+                {
+                    if (unit.Beats(enemyAtTarget))        // Stage 1 - Guaranteed win
+                    {
+                        possibleMoves.Add(new AIMove 
+                        { 
+                            priority = 1, 
+                            unit = unit, 
+                            moveTarget = moveTarget,
+                            attackTarget = enemyAtTarget,
+                            attackPos = enemyAtTarget.Position
+                        });
+                    }
+                    else if (enemyAtTarget.Beats(unit))   // Stage 2 - Smart escape
+                    {
+                        var escapeOptions = GetAdjacentMoves(unit)
+                            .Where(m => BoardManager.Instance.GetUnitAt(m) == null)
+                            .OrderByDescending(m => Distance(m, enemyAtTarget.Position))
+                            .ToList();
 
+                        if (escapeOptions.Any())
+                        {
+                            possibleMoves.Add(new AIMove 
+                            { 
+                                priority = 2, 
+                                unit = unit, 
+                                moveTarget = escapeOptions.First(),
+                                attackTarget = null,
+                                attackPos = Vector2Int.zero
+                            });
+                        }
+                    }
                     else                          // Stage 3 - Tie
-                        priorityMoves.Add((3, unit, target));
+                    {
+                        possibleMoves.Add(new AIMove 
+                        { 
+                            priority = 3, 
+                            unit = unit, 
+                            moveTarget = moveTarget,
+                            attackTarget = enemyAtTarget,
+                            attackPos = enemyAtTarget.Position
+                        });
+                    }
                 }
                 else                              // Stage 4 - Hidden enemy
                 {
-                    if (!knownTraps.Contains(target))
-                        priorityMoves.Add((4, unit, target));
+                    if (!knownTraps.Contains(moveTarget))
+                    {
+                        possibleMoves.Add(new AIMove 
+                        { 
+                            priority = 4, 
+                            unit = unit, 
+                            moveTarget = moveTarget,
+                            attackTarget = enemyAtTarget,
+                            attackPos = enemyAtTarget.Position
+                        });
+                    }
                 }
             }
         }
 
-        if (priorityMoves.Any())
+        if (possibleMoves.Any())
         {
-            var chosen = priorityMoves.OrderBy(p => p.priority).First();
-            UnityEngine.Debug.Log($"Best priority {chosen.priority} - {chosen.unit.name} moves to {chosen.move}");
-            ExecuteMove(chosen.unit, chosen.move);
+            var chosen = possibleMoves.OrderBy(m => m.priority).First();
+            
+            // אם זה מהלך תקיפה, נוודא שהיחידה עדיין במיקום המתוכנן
+            if (chosen.attackTarget != null)
+            {
+                var currentEnemy = BoardManager.Instance.GetUnitAt(chosen.attackPos) as RPSUnit;
+                if (currentEnemy != chosen.attackTarget)
+                {
+                    // היחידה זזה! נחפש את המיקום החדש שלה
+                    UnityEngine.Debug.Log($"Target enemy {chosen.attackTarget.name} moved from {chosen.attackPos}, trying to chase it");
+                    
+                    // נחפש את היחידה על הלוח
+                    var newEnemyPos = chosen.attackTarget.Position;
+                    
+                    // נמצא את הצעד הכי טוב בכיוון היחידה
+                    var bestMove = GetAdjacentMoves(chosen.unit)
+                        .OrderBy(pos => Distance(pos, newEnemyPos))
+                        .FirstOrDefault();
+
+                    if (bestMove != Vector2Int.zero)
+                    {
+                        UnityEngine.Debug.Log($"Moving towards enemy at {newEnemyPos}");
+                        ExecuteMove(chosen.unit, bestMove);
+                        yield break;
+                    }
+                }
+
+                // נוודא שהמרחק מהמיקום החדש ליחידת האויב הוא 1
+                Vector2Int newDelta = chosen.attackPos - chosen.moveTarget;
+                if (Mathf.Abs(newDelta.x) + Mathf.Abs(newDelta.y) != 1)
+                {
+                    UnityEngine.Debug.Log($"🚫 Cannot attack {chosen.attackTarget.name} from {chosen.moveTarget} - Distance must be 1");
+                    
+                    // במקום לבטל את המהלך, ננסה להתקרב ליחידה
+                    var bestMove = GetAdjacentMoves(chosen.unit)
+                        .OrderBy(pos => Distance(pos, chosen.attackTarget.Position))
+                        .FirstOrDefault();
+
+                    if (bestMove != Vector2Int.zero)
+                    {
+                        UnityEngine.Debug.Log($"Moving towards enemy at {chosen.attackTarget.Position}");
+                        ExecuteMove(chosen.unit, bestMove);
+                        yield break;
+                    }
+                    
+                    TurnManager.Instance?.EndTurn();
+                    yield break;
+                }
+            }
+
+            UnityEngine.Debug.Log($"Best priority {chosen.priority} - {chosen.unit.name} moves to {chosen.moveTarget}" + 
+                (chosen.attackTarget != null ? $" to attack {chosen.attackTarget.name}" : ""));
+            ExecuteMove(chosen.unit, chosen.moveTarget);
             yield break;
         }
 
@@ -115,7 +213,7 @@ public class AIPlayerHardController : AIPlayerController
             var allMoves = new List<(RPSUnit unit, Vector2Int move, int dist)>();
             foreach (var unit in aiUnits)
             {
-                foreach (var move in GetValidMoves(unit))
+                foreach (var move in GetAdjacentMoves(unit))
                 {
                     var potential = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
                     if (potential != null && potential.playerId != unit.playerId)
@@ -134,131 +232,123 @@ public class AIPlayerHardController : AIPlayerController
             }
         }
 
-        // Stage 6 - Smart movement with next turn result prediction
-        var moveOptions = new List<(int rank, RPSUnit unit, Vector2Int move)>();
-
-        foreach (var unit in aiUnits)
+        // Final Stage - Always move towards closest unrevealed enemy
+        var unrevealedEnemies = enemyUnits.Where(e => !e.IsRevealed).ToList();
+        
+        // Find the closest AI unit to any unrevealed enemy
+        var closestUnitMove = (unit: (RPSUnit)null, move: Vector2Int.zero, distance: int.MaxValue);
+        
+        foreach (var enemy in unrevealedEnemies)
         {
-            foreach (var move in GetValidMoves(unit).Where(m => BoardManager.Instance.GetUnitAt(m) == null))
+            foreach (var unit in aiUnits)
             {
-                // Assume the unit moved there - check what happens next turn
-                bool willWinNext = false;
-                bool willDrawNext = false;
-                bool willMeetUnknown = false;
-                bool willDie = false;
+                var moves = GetAdjacentMoves(unit)
+                    .Where(m => BoardManager.Instance.GetUnitAt(m) == null) // Only empty spaces
+                    .ToList();
 
-                foreach (var dir in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
+                foreach (var move in moves)
                 {
-                    Vector2Int nextPos = move + dir;
-                    if (!BoardManager.Instance.IsInsideBoard(nextPos)) continue;
-
-                    var neighbor = BoardManager.Instance.GetUnitAt(nextPos) as RPSUnit;
-                    if (neighbor != null && neighbor.playerId != unit.playerId)
+                    int distAfterMove = Distance(move, enemy.Position);
+                    if (distAfterMove < closestUnitMove.distance)
                     {
-                        if (neighbor.IsRevealed)
-                        {
-                            if (unit.Beats(neighbor)) willWinNext = true;
-                            else if (neighbor.Beats(unit)) willDie = true;
-                            else if (unit.Kind == neighbor.Kind) willDrawNext = true;
-                        }
-                        else
-                        {
-                            willMeetUnknown = true;
-                        }
+                        closestUnitMove = (unit, move, distAfterMove);
                     }
                 }
-
-                if (willWinNext)
-                    moveOptions.Add((1, unit, move));
-                else if (willDrawNext)
-                    moveOptions.Add((2, unit, move));
-                else if (willMeetUnknown)
-                    moveOptions.Add((3, unit, move));
-                else if (!willDie)
-                    moveOptions.Add((4, unit, move));
-                else
-                    moveOptions.Add((5, unit, move)); // Bad move - certain death
             }
         }
 
-        // If we found something better than death
-        if (moveOptions.Any(m => m.rank < 5))
+        if (closestUnitMove.unit != null)
         {
-            var best = moveOptions.OrderBy(m => m.rank).First();
-            UnityEngine.Debug.Log($"Smart move rank {best.rank} -> {best.unit.name} moves to {best.move}");
-            ExecuteMove(best.unit, best.move);
+            UnityEngine.Debug.Log($"Moving {closestUnitMove.unit.name} towards closest unrevealed enemy");
+            ExecuteMove(closestUnitMove.unit, closestUnitMove.move);
             yield break;
         }
 
-
-        // No smart moves found
-        UnityEngine.Debug.Log("No smart moves available, ending turn.");
+        // This should never happen as there should always be unrevealed enemies (at least the flag)
+        // But keep it as a safeguard
+        UnityEngine.Debug.Log("Warning: No possible moves found - this should not happen!");
         TurnManager.Instance?.EndTurn();
     }
 
     protected override void ExecuteMove(RPSUnit unit, Vector2Int target)
     {
-        var enemyUnit = BoardManager.Instance.GetUnitAt(target);
-        var enemy = enemyUnit as RPSUnit;
-
-        if (enemy != null)
+        // בדיקה שהתנועה היא חוקית (צעד אחד)
+        Vector2Int delta = target - unit.Position;
+        if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
         {
-            unit.Reveal();
-            enemy.Reveal();
+            UnityEngine.Debug.Log($"🚫 Invalid move attempt from {unit.Position} to {target} - Distance must be 1");
+            TurnManager.Instance?.EndTurn();
+            return;
+        }
 
-            if (enemy.role == RPSUnit.UnitRole.Trap)
-            {
-                UnityEngine.Debug.Log($"{unit.name} stepped on a TRAP at {target} and was destroyed");
+        // בדיקה מחדש של המצב הנוכחי של הלוח
+        var currentEnemyUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
+        
+        // אם אין יחידה במיקום היעד, נבדוק אם יש יחידות אויב סמוכות
+        if (currentEnemyUnit == null)
+        {
+            // נזוז למיקום החדש
+            BoardManager.Instance.PlaceUnit(unit, target);
+            unit.MoveTo(target);
+            TurnManager.Instance?.EndTurn();
+            return;
+        }
 
-                knownTraps.Add(target); // Save to prevent future repeat
+        // אם זו יחידה של ה-AI עצמו, נבטל את המהלך
+        if (currentEnemyUnit.playerId == unit.playerId)
+        {
+            UnityEngine.Debug.Log($"🚫 Cannot attack own unit at {target}");
+            TurnManager.Instance?.EndTurn();
+            return;
+        }
 
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-                TurnManager.Instance?.EndTurn();
-                return;
-            }
+        // מכאן והלאה זו תקיפה של יחידת אויב
+        unit.Reveal();
+        currentEnemyUnit.Reveal();
 
-            if (enemy.role == RPSUnit.UnitRole.Flag)
-            {
-                UnityEngine.Debug.Log($"{unit.name} captured the FLAG at {target}");
+        if (currentEnemyUnit.role == RPSUnit.UnitRole.Trap)
+        {
+            UnityEngine.Debug.Log($"{unit.name} stepped on a TRAP at {target} and was destroyed");
+            knownTraps.Add(target);
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
+            TurnManager.Instance?.EndTurn();
+            return;
+        }
 
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
+        if (currentEnemyUnit.role == RPSUnit.UnitRole.Flag)
+        {
+            UnityEngine.Debug.Log($"{unit.name} captured the FLAG at {target}! YOU LOSE!");
+            BoardManager.Instance.RemoveUnit(currentEnemyUnit);
+            Destroy(currentEnemyUnit.gameObject);
+            BoardManager.Instance.PlaceUnit(unit, target);
+            unit.MoveTo(target);
+            PlayerController.gameEnded = true;
+            TurnTimerManager.Instance?.SetPlayerWon(false);
+            TurnManager.Instance?.StopGame();
+            return;
+        }
 
-                PlayerController.gameEnded = true;
-                return;
-            }
+        if (unit.Kind == currentEnemyUnit.Kind)
+        {
+            UnityEngine.Debug.Log($"Tie - starting battle panel between {unit.name} and {currentEnemyUnit.name} at {target}");
+            BattleManager.Instance?.StartBattle(unit, currentEnemyUnit, target);
+            return;
+        }
 
-            if (unit.Kind == enemy.Kind)
-            {
-                UnityEngine.Debug.Log($"Tie - starting battle panel between {unit.name} and {enemy.name} at {target}");
-                BattleManager.Instance?.StartBattle(unit, enemy, target);
-                return;
-            }
-
-            if (unit.Beats(enemy))
-            {
-                UnityEngine.Debug.Log($"{unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
-
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-            }
-            else
-            {
-                UnityEngine.Debug.Log($"{unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
-
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-            }
+        if (unit.Beats(currentEnemyUnit))
+        {
+            UnityEngine.Debug.Log($"{unit.name} wins the battle at {target}: {unit.Kind} beats {currentEnemyUnit.Kind}");
+            BoardManager.Instance.RemoveUnit(currentEnemyUnit);
+            Destroy(currentEnemyUnit.gameObject);
+            BoardManager.Instance.PlaceUnit(unit, target);
+            unit.MoveTo(target);
         }
         else
         {
-            UnityEngine.Debug.Log($"{unit.name} moves to empty tile {target}");
-            unit.TryMove(target - unit.Position);
+            UnityEngine.Debug.Log($"{unit.name} loses the battle at {target}: {currentEnemyUnit.Kind} beats {unit.Kind}");
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
         }
 
         TurnManager.Instance?.EndTurn();
@@ -281,5 +371,26 @@ public class AIPlayerHardController : AIPlayerController
             ySum += e.Position.y;
         }
         return new Vector2Int(xSum / enemies.Count, ySum / enemies.Count);
+    }
+
+    private List<Vector2Int> GetAdjacentMoves(RPSUnit unit)
+    {
+        var moves = new List<Vector2Int>();
+        var directions = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+
+        foreach (var dir in directions)
+        {
+            Vector2Int newPos = unit.Position + dir;
+            if (BoardManager.Instance.IsInsideBoard(newPos))
+            {
+                // Only add positions that are exactly 1 step away
+                if (Mathf.Abs(newPos.x - unit.Position.x) + Mathf.Abs(newPos.y - unit.Position.y) == 1)
+                {
+                    moves.Add(newPos);
+                }
+            }
+        }
+
+        return moves;
     }
 }
