@@ -17,10 +17,37 @@ public class UnitPlacer : MonoBehaviour
     private List<RPSUnit> player1Units = new List<RPSUnit>();
     private List<RPSUnit> player2Units = new List<RPSUnit>();
 
+    private string currentRoomId;
+    private bool isHost;
+
     void Start()
     {
         PlaceUnits();
-        GameSetupManager.Instance.StartSetup(player1Units, player2Units);
+
+        // For PvE mode, start setup immediately
+        if (GameModeManager.Instance.SelectedMode != GameMode.PvP)
+        {
+            UnityEngine.Debug.Log("[UnitPlacer] Starting PvE setup");
+            GameSetupManager.Instance.StartSetup(player1Units, player2Units);
+        }
+        else
+        {
+            UnityEngine.Debug.Log("[UnitPlacer] Waiting for InitializeWithRoomInfo for PvP setup");
+        }
+    }
+
+    public void InitializeWithRoomInfo(string roomId, bool isHostPlayer)
+    {
+        UnityEngine.Debug.Log($"[UnitPlacer] Initializing with RoomId: {roomId}, IsHost: {isHostPlayer}");
+        currentRoomId = roomId;
+        isHost = isHostPlayer;
+
+        // Only start PvP setup if we're in PvP mode
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP)
+        {
+            UnityEngine.Debug.Log($"[UnitPlacer] Starting PvP setup with RoomId: {currentRoomId}");
+            GameSetupManager.Instance.StartSetup(player1Units, player2Units, roomId, isHost);
+        }
     }
 
     void PlaceUnits()

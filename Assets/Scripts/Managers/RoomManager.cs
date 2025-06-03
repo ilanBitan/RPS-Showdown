@@ -64,13 +64,20 @@ public class RoomManager : MonoBehaviour
 
         UnityEngine.Debug.Log($"Creating room with ID: {currentRoomId}");
 
-        // Create room in Firebase
+        // Create room in Firebase with extended setup tracking
         Dictionary<string, object> roomData = new Dictionary<string, object>
         {
             { "hostId", FirebaseManager.Instance.CurrentUser.UserId },
             { "guestId", "" },
-            { "status", "waiting" },
-            { "createdAt", ServerValue.Timestamp }
+            { "status", "waiting" }, // waiting -> host_setup -> guest_setup -> playing
+            { "createdAt", ServerValue.Timestamp },
+            { "currentSetupPhase", "waiting" }, // waiting -> host -> guest -> complete
+            { "hostSetupComplete", false },
+            { "guestSetupComplete", false },
+            { "hostFlagPosition", "" }, // "col_row" format
+            { "hostTrapPosition", "" },
+            { "guestFlagPosition", "" },
+            { "guestTrapPosition", "" }
         };
 
         try
@@ -223,7 +230,7 @@ public class RoomManager : MonoBehaviour
 
     private void StartGame()
     {
-        UnityEngine.Debug.Log($"Starting game... IsHost: {isHost}");
+        UnityEngine.Debug.Log($"Starting game... IsHost: {isHost}, RoomId: {currentRoomId}");
 
         // Stop listening to room changes
         if (isListening)
@@ -235,6 +242,24 @@ public class RoomManager : MonoBehaviour
         // Load game scene
         GameModeManager.Instance.SelectedMode = GameMode.PvP;
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+
+        // After scene loads, we need to pass the room info to GameSetupManager
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (scene, mode) =>
+        {
+            if (scene.name == "GameScene")
+            {
+                UnityEngine.Debug.Log($"Game scene loaded. Passing room info - RoomId: {currentRoomId}, IsHost: {isHost}");
+                var unitPlacer = FindObjectOfType<UnitPlacer>();
+                if (unitPlacer != null)
+                {
+                    unitPlacer.InitializeWithRoomInfo(currentRoomId, isHost);
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("UnitPlacer not found in scene!");
+                }
+            }
+        };
     }
 
     private void OnDestroy()
