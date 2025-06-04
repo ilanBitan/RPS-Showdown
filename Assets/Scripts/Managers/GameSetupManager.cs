@@ -271,6 +271,39 @@ public class GameSetupManager : MonoBehaviour
                 }
                 UnityEngine.Debug.Log($"[GameSetup] 🎯 Host completed setup. Your turn to select FLAG. Selection step: {selectionStep}");
             }
+            // If setup is complete, update board state from server
+            else if (currentPhase == "complete")
+            {
+                var boardState = snapshot.Child("boardState");
+                if (boardState.Exists)
+                {
+                    foreach (var unitState in boardState.Children)
+                    {
+                        string position = unitState.Key;
+                        string player = unitState.Child("player").Value?.ToString();
+                        string role = unitState.Child("role").Value?.ToString();
+                        string kind = unitState.Child("kind").Value?.ToString();
+
+                        if (!string.IsNullOrEmpty(position) && !string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(role) && !string.IsNullOrEmpty(kind))
+                        {
+                            string[] coords = position.Split('_');
+                            if (coords.Length == 2)
+                            {
+                                int x = int.Parse(coords[0]);
+                                int y = int.Parse(coords[1]);
+                                RPSUnit unit = FindUnitAtPosition(x, y);
+                                if (unit != null)
+                                {
+                                    unit.role = (RPSUnit.UnitRole)Enum.Parse(typeof(RPSUnit.UnitRole), role);
+                                    unit.Kind = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), kind);
+                                    unit.UpdateVisual();
+                                }
+                            }
+                        }
+                    }
+                }
+                FinalizeSetup();
+            }
         });
     }
 
@@ -544,7 +577,10 @@ public class GameSetupManager : MonoBehaviour
 
                         await UpdateRoomSetup(updates);
 
-                        // After server update, finalize setup
+                        // After server update, save the board state
+                        await SaveBoardStateToServer();
+
+                        // Finalize setup
                         UnityEngine.Debug.Log($"[GameSetup] Guest Trap confirmed. Setup complete!");
                         FinalizeSetup();
                         break;
@@ -559,6 +595,77 @@ public class GameSetupManager : MonoBehaviour
             {
                 unit.EnableSetupSelection();
             }
+        }
+    }
+
+    private async Task SaveBoardStateToServer()
+    {
+        try
+        {
+            // First, assign random RPS roles to all units except flags and traps
+            AssignRandomRPS(player1Units);
+            AssignRandomRPS(player2Units);
+
+            // Create a dictionary to store the complete board state
+            Dictionary<string, object> boardState = new Dictionary<string, object>();
+
+            // Process all units and store their state
+            foreach (var unit in player1Units)
+            {
+                string position = $"{unit.Position.x}_{unit.Position.y}";
+                Dictionary<string, object> unitState = new Dictionary<string, object>
+                {
+                    { "player", "host" },
+                    { "role", unit.role.ToString() },
+                    { "kind", unit.Kind.ToString() }
+                };
+                boardState[position] = unitState;
+            }
+
+            foreach (var unit in player2Units)
+            {
+                string position = $"{unit.Position.x}_{unit.Position.y}";
+                Dictionary<string, object> unitState = new Dictionary<string, object>
+                {
+                    { "player", "guest" },
+                    { "role", unit.role.ToString() },
+                    { "kind", unit.Kind.ToString() }
+                };
+                boardState[position] = unitState;
+            }
+
+            // Add empty spaces for middle rows (2-3)
+            for (int x = 0; x < 7; x++)
+            {
+                for (int y = 2; y < 4; y++)
+                {
+                    string position = $"{x}_{y}";
+                    Dictionary<string, object> emptyState = new Dictionary<string, object>
+                    {
+                        { "player", "none" },
+                        { "role", "None" },
+                        { "kind", "None" }
+                    };
+                    boardState[position] = emptyState;
+                }
+            }
+
+            // Update the server with the complete board state
+            var updates = new Dictionary<string, object>
+            {
+                { "boardState", boardState }
+            };
+
+            await UpdateRoomSetup(updates);
+            UnityEngine.Debug.Log("[GameSetup] Board state saved to server");
+
+            // Update visuals for all units
+            foreach (var unit in player1Units) unit.UpdateVisual();
+            foreach (var unit in player2Units) unit.UpdateVisual();
+        }
+        catch (Exception ex)
+        {
+            UnityEngine.Debug.LogError($"[GameSetup] Failed to save board state: {ex.Message}");
         }
     }
 
@@ -608,13 +715,16 @@ public class GameSetupManager : MonoBehaviour
 
     private void FinalizeSetup()
     {
-        UnityEngine.Debug.Log("[GameSetup] 🎲 Finalizing setup: assigning RPS roles randomly...");
-
-        AssignRandomRPS(player1Units);
-        AssignRandomRPS(player2Units);
+        if (GameModeManager.Instance.SelectedMode != GameMode.PvP)
+        {
+            UnityEngine.Debug.Log("[GameSetup] 🎲 Finalizing setup: assigning RPS roles randomly...");
+            AssignRandomRPS(player1Units);
+            AssignRandomRPS(player2Units);
+        }
 
         setupComplete = true;
 
+        // Always update visuals regardless of game mode
         foreach (var unit in player1Units) unit.UpdateVisual();
         foreach (var unit in player2Units) unit.UpdateVisual();
 

@@ -86,7 +86,9 @@ public class RPSUnit : Unit
             else
             {
                 // After setup: Show tools for own units (player 1) always, others only when revealed
-                bool shouldShowTool = (playerId == 1) || isRevealed;
+                // In PvP mode, show tools for both players
+                bool shouldShowTool = (playerId == 1) || isRevealed ||
+                                    (GameModeManager.Instance.SelectedMode == GameMode.PvP);
                 text.text = shouldShowTool ? GetLetter() : "";
             }
             text.color = Color.white;
@@ -103,7 +105,9 @@ public class RPSUnit : Unit
             else
             {
                 // After setup: Show tools for own units (player 1) always, others only when revealed
-                bool shouldShowTool = (playerId == 1) || isRevealed;
+                // In PvP mode, show tools for both players
+                bool shouldShowTool = (playerId == 1) || isRevealed ||
+                                    (GameModeManager.Instance.SelectedMode == GameMode.PvP);
                 visualController.UpdateWeaponVisual(shouldShowTool ? GetLetter() : "");
             }
         }
@@ -170,7 +174,7 @@ public class RPSUnit : Unit
             if (playerController == null) return;
 
             // If it's not player's turn, ignore
-            if (!TurnManager.Instance.IsPlayerTurn(1)) 
+            if (!TurnManager.Instance.IsPlayerTurn(1))
             {
                 UnityEngine.Debug.Log("⏳ Wait for your turn.");
                 return;
