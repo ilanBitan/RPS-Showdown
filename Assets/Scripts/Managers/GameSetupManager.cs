@@ -220,19 +220,24 @@ public class GameSetupManager : MonoBehaviour
         DataSnapshot snapshot = args.Snapshot;
         if (!snapshot.Exists) return;
 
-        // Get host's selections
+        // Get all selections
         string hostFlagPos = snapshot.Child("hostFlagPosition").Value?.ToString();
         string hostTrapPos = snapshot.Child("hostTrapPosition").Value?.ToString();
+        string guestFlagPos = snapshot.Child("guestFlagPosition").Value?.ToString();
+        string guestTrapPos = snapshot.Child("guestTrapPosition").Value?.ToString();
         string currentPhase = snapshot.Child("currentSetupPhase").Value?.ToString();
 
         UnityEngine.Debug.Log($"[GameSetup] 📡 Received server update:");
         UnityEngine.Debug.Log($"[GameSetup] - Host Flag: {hostFlagPos}");
         UnityEngine.Debug.Log($"[GameSetup] - Host Trap: {hostTrapPos}");
+        UnityEngine.Debug.Log($"[GameSetup] - Guest Flag: {guestFlagPos}");
+        UnityEngine.Debug.Log($"[GameSetup] - Guest Trap: {guestTrapPos}");
         UnityEngine.Debug.Log($"[GameSetup] - Current Phase: {currentPhase}");
 
         // Update visuals on main thread
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
+            // Update host's selections
             if (!string.IsNullOrEmpty(hostFlagPos))
             {
                 UpdateUnitFromPosition(hostFlagPos, RPSUnit.UnitRole.Flag);
@@ -242,10 +247,21 @@ public class GameSetupManager : MonoBehaviour
                 UpdateUnitFromPosition(hostTrapPos, RPSUnit.UnitRole.Trap);
             }
 
+            // Update guest's selections
+            if (!string.IsNullOrEmpty(guestFlagPos))
+            {
+                UpdateUnitFromPosition(guestFlagPos, RPSUnit.UnitRole.Flag);
+            }
+            if (!string.IsNullOrEmpty(guestTrapPos))
+            {
+                UpdateUnitFromPosition(guestTrapPos, RPSUnit.UnitRole.Trap);
+            }
+
             // If host completed setup, enable guest's selection
             if (currentPhase == "guest" && !isHost)
             {
                 isHostTurn = false;
+                selectionStep = 2; // Set the correct step for guest's turn
                 foreach (var unit in player2Units)
                 {
                     if (unit.Position.y < 2) // Only enable top rows
@@ -253,7 +269,7 @@ public class GameSetupManager : MonoBehaviour
                         unit.EnableSetupSelection();
                     }
                 }
-                UnityEngine.Debug.Log("[GameSetup] 🎯 Host completed setup. Your turn to select FLAG.");
+                UnityEngine.Debug.Log($"[GameSetup] 🎯 Host completed setup. Your turn to select FLAG. Selection step: {selectionStep}");
             }
         });
     }
@@ -465,6 +481,18 @@ public class GameSetupManager : MonoBehaviour
                                 p2Unit.EnableSetupSelection();
                             }
                         }
+
+                        // Keep listening for guest's selections
+                        if (roomRef == null)
+                        {
+                            roomRef = FirebaseManager.Instance.DatabaseReference.Child("rooms").Child(currentRoomId);
+                        }
+                        if (!isListening)
+                        {
+                            roomRef.ValueChanged += HandleRoomValueChanged;
+                            isListening = true;
+                            UnityEngine.Debug.Log("[GameSetup] 🎯 Host completed setup. Listening for guest's selections.");
+                        }
                         break;
                 }
             }
@@ -485,6 +513,15 @@ public class GameSetupManager : MonoBehaviour
                         // After server update, update the game state
                         selectionStep = 3;
                         UnityEngine.Debug.Log($"[GameSetup] Guest Flag confirmed at {position}");
+
+                        // Re-enable selection for remaining units
+                        foreach (var p2Unit in player2Units)
+                        {
+                            if (p2Unit != null && p2Unit.Position.y < 2 && p2Unit.role == RPSUnit.UnitRole.None)
+                            {
+                                p2Unit.EnableSetupSelection();
+                            }
+                        }
                         break;
 
                     case 3: // Guest selecting trap

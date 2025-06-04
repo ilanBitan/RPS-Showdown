@@ -199,6 +199,14 @@ public class RoomManager : MonoBehaviour
         string status = snapshot.Child("status").Value?.ToString();
         string guestId = snapshot.Child("guestId").Value?.ToString();
         string hostId = snapshot.Child("hostId").Value?.ToString();
+        string currentSetupPhase = snapshot.Child("currentSetupPhase").Value?.ToString();
+
+        // Ignore updates during setup phase
+        if (!string.IsNullOrEmpty(currentSetupPhase) && currentSetupPhase != "waiting")
+        {
+            UnityEngine.Debug.Log($"[RoomManager] Ignoring room update during setup phase: {currentSetupPhase}");
+            return;
+        }
 
         UnityEngine.Debug.Log($"Room state changed - Status: {status}, GuestId: {guestId}, HostId: {hostId}, IsHost: {isHost}");
 
@@ -230,7 +238,7 @@ public class RoomManager : MonoBehaviour
 
     private void StartGame()
     {
-        UnityEngine.Debug.Log($"Starting game... IsHost: {isHost}, RoomId: {currentRoomId}");
+        UnityEngine.Debug.Log($"[RoomManager] Starting game... IsHost: {isHost}, RoomId: {currentRoomId}");
 
         // Stop listening to room changes
         if (isListening)
@@ -248,7 +256,7 @@ public class RoomManager : MonoBehaviour
         {
             if (scene.name == "GameScene")
             {
-                UnityEngine.Debug.Log($"Game scene loaded. Passing room info - RoomId: {currentRoomId}, IsHost: {isHost}");
+                UnityEngine.Debug.Log($"[RoomManager] Game scene loaded. Passing room info - RoomId: {currentRoomId}, IsHost: {isHost}");
                 var unitPlacer = FindObjectOfType<UnitPlacer>();
                 if (unitPlacer != null)
                 {
@@ -256,7 +264,7 @@ public class RoomManager : MonoBehaviour
                 }
                 else
                 {
-                    UnityEngine.Debug.LogError("UnitPlacer not found in scene!");
+                    UnityEngine.Debug.LogError("[RoomManager] UnitPlacer not found in scene!");
                 }
             }
         };
