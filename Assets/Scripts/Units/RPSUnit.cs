@@ -270,7 +270,7 @@ public class RPSUnit : Unit
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
-                BoardManager.Instance.PlaceUnit(this, targetPos);
+                //BoardManager.Instance.PlaceUnit(this, targetPos);
 
                 /*     // ✨ הצג את מסך הניצחון
                      GameEndHandler handler = FindObjectOfType<GameEndHandler>();
@@ -295,7 +295,7 @@ public class RPSUnit : Unit
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
-                BoardManager.Instance.PlaceUnit(this, targetPos);
+                //BoardManager.Instance.PlaceUnit(this, targetPos);
                 return true;
             }
 
@@ -312,7 +312,7 @@ public class RPSUnit : Unit
         }
 
         MoveTo(targetPos);
-        BoardManager.Instance.PlaceUnit(this, targetPos);
+        //BoardManager.Instance.PlaceUnit(this, targetPos);
         return true;
     }
 

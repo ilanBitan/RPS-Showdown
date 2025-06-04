@@ -74,6 +74,8 @@ public class Tile : MonoBehaviour, IPointerClickHandler
         {
             // Try to move/attack in that direction
             // This will handle both movement to empty space and attacking enemy units
+            Debug.Log($"are you here");
+
             selectedUnit.TryMove(direction);
         }
         else

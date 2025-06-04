@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
 using static RPSUnit;
@@ -9,6 +8,10 @@ public class BattleManager : MonoBehaviour
     public static BattleManager Instance;
 
     public GameObject battlePanel;
+    public GameObject fightPanel;
+    public GameObject fightPlayer;
+    public GameObject fightEnemy;
+
     public Button rockButton, paperButton, scissorsButton;
 
     private RPSUnit playerUnit;
@@ -29,13 +32,11 @@ public class BattleManager : MonoBehaviour
             Instance = this;
 
         battlePanel?.SetActive(false);
+        fightPanel?.SetActive(false);
     }
 
     public void StartBattle(RPSUnit initiator, RPSUnit opponent, Vector2Int target)
     {
-        //   if (GameEndHandler.gameEnded)
-        //      return;
-
         isPlayerInitiator = initiator.IsPlayerControlled;
 
         if (isPlayerInitiator)
@@ -57,6 +58,20 @@ public class BattleManager : MonoBehaviour
 
     private void ShowPlayerPanel()
     {
+        StartCoroutine(AnimateFightPanelThenShowBattle());
+    }
+
+    private IEnumerator AnimateFightPanelThenShowBattle()
+    {
+        fightPanel?.SetActive(true);
+
+        Animator anim = fightPanel.GetComponent<Animator>();
+        if (anim != null)
+            anim.SetTrigger("run");
+
+        yield return new WaitForSeconds(0.8f);
+
+        fightPanel?.SetActive(false);
         battlePanel?.SetActive(true);
 
         rockButton.onClick.RemoveAllListeners();
@@ -73,21 +88,14 @@ public class BattleManager : MonoBehaviour
     {
         playerChoice = choice;
 
-        // בדיקה אם זו רמה קשה
         bool isHardLevel = FindObjectOfType<AIPlayerHardController>() != null;
 
         if (isHardLevel)
         {
-            UnityEngine.Debug.Log("Hard level detected - AI will make smart choice based on player statistics");
-
-            // קבלת סטטיסטיקות מהשרת
             FirebaseManager.Instance?.DatabaseService?.GetUserStats((userData) =>
             {
                 if (userData != null)
                 {
-                    UnityEngine.Debug.Log($"Player statistics - Rock: {userData.rockChoices}, Paper: {userData.paperChoices}, Scissors: {userData.scissorsChoices}");
-
-                    // מציאת הכלי הנפוץ ביותר של השחקן
                     RPSUnit.RPSKind mostCommonChoice = RPSUnit.RPSKind.Rock;
                     int maxCount = userData.rockChoices;
 
@@ -102,46 +110,26 @@ public class BattleManager : MonoBehaviour
                         maxCount = userData.scissorsChoices;
                     }
 
-                    UnityEngine.Debug.Log($"Player's most common choice: {mostCommonChoice}");
-
-                    // בחירת הכלי המנצח
                     switch (mostCommonChoice)
                     {
-                        case RPSUnit.RPSKind.Rock:
-                            aiChoice = RPSUnit.RPSKind.Paper;
-                            break;
-                        case RPSUnit.RPSKind.Paper:
-                            aiChoice = RPSUnit.RPSKind.Scissors;
-                            break;
-                        case RPSUnit.RPSKind.Scissors:
-                            aiChoice = RPSUnit.RPSKind.Rock;
-                            break;
+                        case RPSUnit.RPSKind.Rock: aiChoice = RPSUnit.RPSKind.Paper; break;
+                        case RPSUnit.RPSKind.Paper: aiChoice = RPSUnit.RPSKind.Scissors; break;
+                        case RPSUnit.RPSKind.Scissors: aiChoice = RPSUnit.RPSKind.Rock; break;
                     }
-
-                    UnityEngine.Debug.Log($"AI chose {aiChoice} to counter player's {mostCommonChoice}");
                 }
                 else
                 {
-                    // אם אין נתונים, נבחר באופן רנדומלי
-                    aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
-                    UnityEngine.Debug.Log("No player statistics available - AI chose randomly: " + aiChoice);
+                    aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
                 }
 
-                // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
                 FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
-
                 ResolveBattle();
             });
         }
         else
         {
-            // רמה רגילה - בחירה רנדומלית
-            aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
-            UnityEngine.Debug.Log($"Battle initiated! Player chose {playerChoice}, AI chose {aiChoice} (random)");
-
-            // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+            aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
             FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
-
             ResolveBattle();
         }
     }
@@ -153,7 +141,6 @@ public class BattleManager : MonoBehaviour
         bool playerWins = Beats(playerChoice, aiChoice);
         bool aiWins = Beats(aiChoice, playerChoice);
 
-        // חשיפת שתי היחידות תמיד
         playerUnit.Kind = playerChoice;
         aiUnit.Kind = aiChoice;
 
@@ -163,56 +150,63 @@ public class BattleManager : MonoBehaviour
         playerUnit.UpdateVisual();
         aiUnit.UpdateVisual();
 
-        // בדיקת ניצחון אם FLAG נחשף
-        if (playerUnit.role == RPSUnit.UnitRole.Flag)
-        {
-            //FindObjectOfType<GameEndHandler>().ShowVictory("Player 2");
+        if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
             return;
-        }
-        if (aiUnit.role == RPSUnit.UnitRole.Flag)
-        {
-            //   FindObjectOfType<GameEndHandler>().ShowVictory("Player 1");
-            return;
-        }
 
         if (playerWins)
         {
-            UnityEngine.Debug.Log("✅ Player wins the battle!");
-            BoardManager.Instance.RemoveUnit(aiUnit);
-            Destroy(aiUnit.gameObject);
-            playerUnit.MoveTo(targetPos);
-            EndBattle();
+            StartCoroutine(ShowFightResultAndFinish(true, false));
         }
         else if (aiWins)
         {
-            UnityEngine.Debug.Log("❌ AI wins the battle!");
-            BoardManager.Instance.RemoveUnit(playerUnit);
-            Destroy(playerUnit.gameObject);
-            aiUnit.MoveTo(targetPos);
-            EndBattle();
+            StartCoroutine(ShowFightResultAndFinish(false, true));
         }
         else
         {
-            UnityEngine.Debug.Log("🤝 Tie – rematch round!");
             battlePanel?.SetActive(true);
             Invoke(nameof(ShowPlayerPanel), 0.5f);
-            return;
         }
+    }
+
+    private IEnumerator ShowFightResultAndFinish(bool playerWon, bool aiWon)
+    {
+        fightPanel?.SetActive(true);
+
+        Animator playerAnimator = fightPlayer?.GetComponent<Animator>();
+        Animator enemyAnimator = fightEnemy?.GetComponent<Animator>();
+
+        if (playerWon)
+        {
+            playerAnimator?.SetTrigger("won");
+            enemyAnimator?.SetTrigger("lost");
+        }
+        else if (aiWon)
+        {
+            playerAnimator?.SetTrigger("lost");
+            enemyAnimator?.SetTrigger("won");
+        }
+
+        yield return new WaitForSeconds(2f);
+
+        fightPanel?.SetActive(false);
+
+        if (playerWon)
+        {
+            BoardManager.Instance.RemoveUnit(aiUnit);
+            Destroy(aiUnit.gameObject);
+            playerUnit.MoveTo(targetPos);
+        }
+        else if (aiWon)
+        {
+            BoardManager.Instance.RemoveUnit(playerUnit);
+            Destroy(playerUnit.gameObject);
+            aiUnit.MoveTo(targetPos);
+        }
+
+        EndBattle();
 
         foreach (var controller in FindObjectsOfType<PlayerController>())
             controller.ClearSelection();
-    }
-
-    private void MoveUnitTo(RPSUnit unit, Vector2Int target)
-    {
-        unit.MoveTo(target);
-    }
-
-    private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
-    {
-        return (a == RPSUnit.RPSKind.Rock && b == RPSUnit.RPSKind.Scissors) ||
-               (a == RPSUnit.RPSKind.Paper && b == RPSUnit.RPSKind.Rock) ||
-               (a == RPSUnit.RPSKind.Scissors && b == RPSUnit.RPSKind.Paper);
     }
 
     private void EndBattle()
@@ -223,6 +217,13 @@ public class BattleManager : MonoBehaviour
         battlePanel?.SetActive(false);
 
         TurnManager.Instance?.EndTurn();
+    }
+
+    private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
+    {
+        return (a == RPSUnit.RPSKind.Rock && b == RPSUnit.RPSKind.Scissors) ||
+               (a == RPSUnit.RPSKind.Paper && b == RPSUnit.RPSKind.Rock) ||
+               (a == RPSUnit.RPSKind.Scissors && b == RPSUnit.RPSKind.Paper);
     }
 
     public bool IsBattleActive()

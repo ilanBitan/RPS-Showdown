@@ -9,7 +9,7 @@ public class TouchMovementHandler : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            // морет мзйцд тм UI
+            // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ UI
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 return;
 
