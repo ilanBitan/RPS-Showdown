@@ -7,8 +7,11 @@ public class BattleManager : MonoBehaviour
 {
     public static BattleManager Instance;
 
-    [Header("Battle UI")]
     public GameObject battlePanel;
+    public GameObject fightPanel;
+    public GameObject fightPlayer;
+    public GameObject fightEnemy;
+
     public Button rockButton, paperButton, scissorsButton;
 
     private RPSUnit playerUnit;
@@ -21,6 +24,12 @@ public class BattleManager : MonoBehaviour
 
     private bool isPlayerInitiator;
 
+    public Sprite rockSprite;
+    public Sprite paperSprite;
+    public Sprite scissorsSprite;
+    public GameObject playerWeaponDisplay;
+    public GameObject enemyWeaponDisplay;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -29,6 +38,7 @@ public class BattleManager : MonoBehaviour
             Instance = this;
 
         battlePanel?.SetActive(false);
+        fightPanel?.SetActive(false);
     }
 
     public void StartBattle(RPSUnit initiator, RPSUnit opponent, Vector2Int target)
@@ -49,20 +59,49 @@ public class BattleManager : MonoBehaviour
         targetPos = target;
         isBattleActive = true;
 
-        StartCoroutine(StartBattleSequence());
+        ShowPlayerPanel();
     }
 
-    private IEnumerator StartBattleSequence()
+    private void ShowPlayerPanel()
     {
-        // Play intro animation
-        yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
-        
-        // Show battle UI
-        ShowBattleUI();
+        // Set previous weapon visuals before animation starts
+        UpdatePreChoiceWeaponDisplay(); // <-- NEW
+
+        StartCoroutine(AnimateFightPanelThenShowBattle());
     }
 
-    private void ShowBattleUI()
+    private void UpdatePreChoiceWeaponDisplay()
     {
+        if (playerWeaponDisplay != null)
+        {
+            Image playerImage = playerWeaponDisplay.GetComponent<Image>();
+            if (playerImage != null)
+            {
+                playerImage.sprite = GetSpriteForChoice(playerUnit.Kind);
+            }
+        }
+
+        if (enemyWeaponDisplay != null)
+        {
+            Image enemyImage = enemyWeaponDisplay.GetComponent<Image>();
+            if (enemyImage != null)
+            {
+                enemyImage.sprite = GetSpriteForChoice(aiUnit.Kind);
+            }
+        }
+    }
+
+    private IEnumerator AnimateFightPanelThenShowBattle()
+    {
+        fightPanel?.SetActive(true);
+
+        Animator anim = fightPanel.GetComponent<Animator>();
+        if (anim != null)
+            anim.SetTrigger("run");
+
+        yield return new WaitForSeconds(1.2f);
+
+        fightPanel?.SetActive(false);
         battlePanel?.SetActive(true);
 
         rockButton.onClick.RemoveAllListeners();
@@ -132,35 +171,6 @@ public class BattleManager : MonoBehaviour
         bool playerWins = Beats(playerChoice, aiChoice);
         bool aiWins = Beats(aiChoice, playerChoice);
 
-        // Update unit data
-        UpdateUnits();
-
-        // Handle special case for flags
-        if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
-            return;
-
-        // Handle battle result
-        if (playerWins)
-        {
-            StartCoroutine(HandleBattleResult(true, false));
-        }
-        else if (aiWins)
-        {
-            StartCoroutine(HandleBattleResult(false, true));
-        }
-        else
-        {
-            // Tie - restart battle
-        StartCoroutine(HandleTieReplay());
-        }
-    }
-private IEnumerator HandleTieReplay()
-{
-    yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
-    ShowBattleUI(); // shows rock/paper/scissors buttons again
-}
-    private void UpdateUnits()
-    {
         playerUnit.Kind = playerChoice;
         aiUnit.Kind = aiChoice;
 
@@ -169,17 +179,81 @@ private IEnumerator HandleTieReplay()
 
         playerUnit.UpdateVisual();
         aiUnit.UpdateVisual();
+
+        UpdateFightDisplaySprites();
+
+        if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
+            return;
+
+        if (playerWins)
+        {
+            StartCoroutine(ShowFightResultAndFinish(true, false));
+        }
+        else if (aiWins)
+        {
+            StartCoroutine(ShowFightResultAndFinish(false, true));
+        }
+        else
+        {
+            battlePanel?.SetActive(true);
+            Invoke(nameof(ShowPlayerPanel), 0.5f);
+        }
     }
 
-    private IEnumerator HandleBattleResult(bool playerWon, bool aiWon)
+    private void UpdateFightDisplaySprites()
     {
-        // Update visual displays right before showing result animation
-        FightAnimationManager.Instance.UpdateWeaponDisplays(playerChoice, aiChoice);
-        
-        // Play result animation
-        yield return StartCoroutine(FightAnimationManager.Instance.PlayFightResultAnimation(playerWon, aiWon));
+        if (playerWeaponDisplay != null)
+        {
+            Image playerImage = playerWeaponDisplay.GetComponent<Image>();
+            if (playerImage != null)
+            {
+                playerImage.sprite = GetSpriteForChoice(playerChoice);
+            }
+        }
 
-        // Handle unit removal and movement
+        if (enemyWeaponDisplay != null)
+        {
+            Image enemyImage = enemyWeaponDisplay.GetComponent<Image>();
+            if (enemyImage != null)
+            {
+                enemyImage.sprite = GetSpriteForChoice(aiChoice);
+            }
+        }
+    }
+
+    private Sprite GetSpriteForChoice(RPSUnit.RPSKind choice)
+    {
+        switch (choice)
+        {
+            case RPSUnit.RPSKind.Rock: return rockSprite;
+            case RPSUnit.RPSKind.Paper: return paperSprite;
+            case RPSUnit.RPSKind.Scissors: return scissorsSprite;
+            default: return rockSprite;
+        }
+    }
+
+    private IEnumerator ShowFightResultAndFinish(bool playerWon, bool aiWon)
+    {
+        fightPanel?.SetActive(true);
+
+        Animator playerAnimator = fightPlayer?.GetComponent<Animator>();
+        Animator enemyAnimator = fightEnemy?.GetComponent<Animator>();
+
+        if (playerWon)
+        {
+            playerAnimator?.SetTrigger("won");
+            enemyAnimator?.SetTrigger("lost");
+        }
+        else if (aiWon)
+        {
+            playerAnimator?.SetTrigger("lost");
+            enemyAnimator?.SetTrigger("won");
+        }
+
+        yield return new WaitForSeconds(2f);
+
+        fightPanel?.SetActive(false);
+
         if (playerWon)
         {
             BoardManager.Instance.RemoveUnit(aiUnit);
@@ -194,13 +268,17 @@ private IEnumerator HandleTieReplay()
         }
 
         EndBattle();
+
+        foreach (var controller in FindObjectsOfType<PlayerController>())
+            controller.ClearSelection();
     }
 
-    private IEnumerator RestartBattle()
+        private void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {
-        yield return new WaitForSeconds(0.5f);
-        ShowBattleUI();
+        unit.MoveTo(target);
     }
+
+
 
     private void EndBattle()
     {
@@ -210,9 +288,6 @@ private IEnumerator HandleTieReplay()
         battlePanel?.SetActive(false);
 
         TurnManager.Instance?.EndTurn();
-
-        foreach (var controller in FindObjectsOfType<PlayerController>())
-            controller.ClearSelection();
     }
 
     private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)

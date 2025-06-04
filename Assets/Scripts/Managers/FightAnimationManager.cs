@@ -6,17 +6,14 @@ public class FightAnimationManager : MonoBehaviour
 {
     public static FightAnimationManager Instance;
 
-    [Header("Fight Panel")]
     public GameObject fightPanel;
     public GameObject fightPlayer;
     public GameObject fightEnemy;
 
-    [Header("RPS Sprites")]
     public Sprite rockSprite;
     public Sprite paperSprite;
     public Sprite scissorsSprite;
 
-    [Header("Weapon Display GameObjects")]
     public GameObject playerWeaponDisplay;
     public GameObject enemyWeaponDisplay;
 
