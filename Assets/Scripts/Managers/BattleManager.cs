@@ -69,7 +69,7 @@ public class BattleManager : MonoBehaviour
         if (anim != null)
             anim.SetTrigger("run");
 
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(1.2f);
 
         fightPanel?.SetActive(false);
         battlePanel?.SetActive(true);
