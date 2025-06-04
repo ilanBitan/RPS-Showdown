@@ -7,11 +7,8 @@ public class BattleManager : MonoBehaviour
 {
     public static BattleManager Instance;
 
+    [Header("Battle UI")]
     public GameObject battlePanel;
-    public GameObject fightPanel;
-    public GameObject fightPlayer;
-    public GameObject fightEnemy;
-
     public Button rockButton, paperButton, scissorsButton;
 
     private RPSUnit playerUnit;
@@ -32,7 +29,6 @@ public class BattleManager : MonoBehaviour
             Instance = this;
 
         battlePanel?.SetActive(false);
-        fightPanel?.SetActive(false);
     }
 
     public void StartBattle(RPSUnit initiator, RPSUnit opponent, Vector2Int target)
@@ -53,25 +49,20 @@ public class BattleManager : MonoBehaviour
         targetPos = target;
         isBattleActive = true;
 
-        ShowPlayerPanel();
+        StartCoroutine(StartBattleSequence());
     }
 
-    private void ShowPlayerPanel()
+    private IEnumerator StartBattleSequence()
     {
-        StartCoroutine(AnimateFightPanelThenShowBattle());
+        // Play intro animation
+        yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+        
+        // Show battle UI
+        ShowBattleUI();
     }
 
-    private IEnumerator AnimateFightPanelThenShowBattle()
+    private void ShowBattleUI()
     {
-        fightPanel?.SetActive(true);
-
-        Animator anim = fightPanel.GetComponent<Animator>();
-        if (anim != null)
-            anim.SetTrigger("run");
-
-        yield return new WaitForSeconds(1.2f);
-
-        fightPanel?.SetActive(false);
         battlePanel?.SetActive(true);
 
         rockButton.onClick.RemoveAllListeners();
@@ -141,6 +132,35 @@ public class BattleManager : MonoBehaviour
         bool playerWins = Beats(playerChoice, aiChoice);
         bool aiWins = Beats(aiChoice, playerChoice);
 
+        // Update unit data
+        UpdateUnits();
+
+        // Handle special case for flags
+        if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
+            return;
+
+        // Handle battle result
+        if (playerWins)
+        {
+            StartCoroutine(HandleBattleResult(true, false));
+        }
+        else if (aiWins)
+        {
+            StartCoroutine(HandleBattleResult(false, true));
+        }
+        else
+        {
+            // Tie - restart battle
+        StartCoroutine(HandleTieReplay());
+        }
+    }
+private IEnumerator HandleTieReplay()
+{
+    yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+    ShowBattleUI(); // shows rock/paper/scissors buttons again
+}
+    private void UpdateUnits()
+    {
         playerUnit.Kind = playerChoice;
         aiUnit.Kind = aiChoice;
 
@@ -149,47 +169,17 @@ public class BattleManager : MonoBehaviour
 
         playerUnit.UpdateVisual();
         aiUnit.UpdateVisual();
-
-        if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
-            return;
-
-        if (playerWins)
-        {
-            StartCoroutine(ShowFightResultAndFinish(true, false));
-        }
-        else if (aiWins)
-        {
-            StartCoroutine(ShowFightResultAndFinish(false, true));
-        }
-        else
-        {
-            battlePanel?.SetActive(true);
-            Invoke(nameof(ShowPlayerPanel), 0.5f);
-        }
     }
 
-    private IEnumerator ShowFightResultAndFinish(bool playerWon, bool aiWon)
+    private IEnumerator HandleBattleResult(bool playerWon, bool aiWon)
     {
-        fightPanel?.SetActive(true);
+        // Update visual displays right before showing result animation
+        FightAnimationManager.Instance.UpdateWeaponDisplays(playerChoice, aiChoice);
+        
+        // Play result animation
+        yield return StartCoroutine(FightAnimationManager.Instance.PlayFightResultAnimation(playerWon, aiWon));
 
-        Animator playerAnimator = fightPlayer?.GetComponent<Animator>();
-        Animator enemyAnimator = fightEnemy?.GetComponent<Animator>();
-
-        if (playerWon)
-        {
-            playerAnimator?.SetTrigger("won");
-            enemyAnimator?.SetTrigger("lost");
-        }
-        else if (aiWon)
-        {
-            playerAnimator?.SetTrigger("lost");
-            enemyAnimator?.SetTrigger("won");
-        }
-
-        yield return new WaitForSeconds(2f);
-
-        fightPanel?.SetActive(false);
-
+        // Handle unit removal and movement
         if (playerWon)
         {
             BoardManager.Instance.RemoveUnit(aiUnit);
@@ -204,9 +194,12 @@ public class BattleManager : MonoBehaviour
         }
 
         EndBattle();
+    }
 
-        foreach (var controller in FindObjectsOfType<PlayerController>())
-            controller.ClearSelection();
+    private IEnumerator RestartBattle()
+    {
+        yield return new WaitForSeconds(0.5f);
+        ShowBattleUI();
     }
 
     private void EndBattle()
@@ -217,6 +210,9 @@ public class BattleManager : MonoBehaviour
         battlePanel?.SetActive(false);
 
         TurnManager.Instance?.EndTurn();
+
+        foreach (var controller in FindObjectsOfType<PlayerController>())
+            controller.ClearSelection();
     }
 
     private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)

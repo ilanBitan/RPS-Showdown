@@ -1258,7 +1258,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: FightEnemy
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4238573948005111685, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+    - {fileID: 902698534208292838, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -1269,6 +1271,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 991526810}
   m_SourcePrefab: {fileID: 100100000, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+--- !u!1 &470766690 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1436952521303927570, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+  m_PrefabInstance: {fileID: 470766689}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &574403382
 GameObject:
   m_ObjectHideFlags: 0
@@ -1733,6 +1740,58 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 7976224916124337594, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
   m_PrefabInstance: {fileID: 470766689}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &845394616
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 845394618}
+  - component: {fileID: 845394617}
+  m_Layer: 0
+  m_Name: FightAnimationManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &845394617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 845394616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53df3c3ce9ad9884fac8f832b39c0cdb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fightPanel: {fileID: 1791520484}
+  fightPlayer: {fileID: 1256305238}
+  fightEnemy: {fileID: 837558462}
+  rockSprite: {fileID: -1203330386, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
+  paperSprite: {fileID: 2105449755, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
+  scissorsSprite: {fileID: -814062723, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
+  playerWeaponDisplay: {fileID: 1556715464}
+  enemyWeaponDisplay: {fileID: 470766690}
+--- !u!4 &845394618
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 845394616}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 400.47992, y: 738.2169, z: 63.104828}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &991526808 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5849864946235516599, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
@@ -2451,7 +2510,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: 'FightPlayer '
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4238573948005111685, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+    - {fileID: 902698534208292838, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -2462,6 +2523,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1065800254}
   m_SourcePrefab: {fileID: 100100000, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+--- !u!1 &1556715464 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1436952521303927570, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+  m_PrefabInstance: {fileID: 1556715463}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1603598233
 GameObject:
   m_ObjectHideFlags: 0
@@ -2633,7 +2699,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1791520485
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2781,9 +2847,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battlePanel: {fileID: 1603598233}
-  fightPanel: {fileID: 1791520484}
-  fightPlayer: {fileID: 1256305238}
-  fightEnemy: {fileID: 837558462}
   rockButton: {fileID: 307285541}
   paperButton: {fileID: 14213810}
   scissorsButton: {fileID: 335889142}
@@ -3072,4 +3135,5 @@ SceneRoots:
   - {fileID: 98201756}
   - {fileID: 2095566028}
   - {fileID: 1796526415}
+  - {fileID: 845394618}
   - {fileID: 787850425}
