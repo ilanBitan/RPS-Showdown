@@ -288,6 +288,7 @@ public class RPSUnit : Unit
                     BattleManager.Instance.StartBattle(this, enemy, targetPos);
                 return false;
             }
+            StartCoroutine(HandleBattle(this, enemy, targetPos));
 
             if (Beats(enemy))
             {
@@ -386,4 +387,26 @@ public class RPSUnit : Unit
     {
         return other != null && other.playerId != this.playerId;
     }
+
+
+
+    private IEnumerator HandleBattle(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos)
+{
+    bool attackerWins = attacker.Beats(defender);
+    bool defenderWins = defender.Beats(attacker);
+
+    // Reveal both units
+    attacker.Reveal();
+    defender.Reveal();
+
+    // Play animation
+    yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(attackerWins, defenderWins));
+
+    // Handle result
+
+    // Optional: clean selection or trigger round end
+    foreach (var controller in FindObjectsOfType<PlayerController>())
+        controller.ClearSelection();
+}
+
 }
