@@ -65,6 +65,77 @@ public class TurnTimerManager : MonoBehaviour
                 button.interactable = true;
             }
         }
+
+        // עדכון סטטיסטיקות בשרת רק במשחקי PvE
+        if (GameModeManager.Instance != null && IsPlayerVsComputer())
+        {
+            UpdatePlayerStatistics(won);
+        }
+    }
+
+    private bool IsPlayerVsComputer()
+    {
+        var mode = GameModeManager.Instance.SelectedMode;
+        return mode == GameMode.PvE_Easy || mode == GameMode.PvE_Medium || mode == GameMode.PvE_Hard;
+    }
+
+    private void UpdatePlayerStatistics(bool playerWon)
+    {
+        if (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsInitialized)
+        {
+            UnityEngine.Debug.LogWarning("Firebase not initialized, cannot update player statistics");
+            return;
+        }
+
+        var dbService = FirebaseManager.Instance.DatabaseService;
+        if (dbService == null)
+        {
+            UnityEngine.Debug.LogWarning("Database service not available, cannot update player statistics");
+            return;
+        }
+
+        // קבלת הסטטיסטיקות הנוכחיות מהשרת
+        dbService.GetUserStats((userData) => {
+            if (userData == null)
+            {
+                UnityEngine.Debug.LogError("Could not get user data to update statistics");
+                return;
+            }
+
+            if (playerWon)
+            {
+                // עדכון נצחונות
+                int newWins = userData.wins + 1;
+                dbService.UpdateUserWins(newWins);
+
+                // עדכון נקודות בהתאם לרמת קושי
+                int pointsToAdd = GetPointsForDifficulty();
+                int newScore = userData.score + pointsToAdd;
+                dbService.UpdateUserScore(newScore);
+
+                UnityEngine.Debug.Log($"Player won! Added {pointsToAdd} points. New wins: {newWins}, New score: {newScore}");
+            }
+            else
+            {
+                // עדכון הפסדים
+                int newLosses = userData.losses + 1;
+                dbService.UpdateUserLosses(newLosses);
+
+                UnityEngine.Debug.Log($"Player lost! New losses: {newLosses}");
+            }
+        });
+    }
+
+    private int GetPointsForDifficulty()
+    {
+        var mode = GameModeManager.Instance.SelectedMode;
+        return mode switch
+        {
+            GameMode.PvE_Easy => 10,
+            GameMode.PvE_Medium => 50,
+            GameMode.PvE_Hard => 100,
+            _ => 0
+        };
     }
 
     private void Update()

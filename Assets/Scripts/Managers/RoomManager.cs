@@ -30,8 +30,11 @@ public class RoomManager : MonoBehaviour
 
     private void Start()
     {
-        // Initialize UI
-        roomPanel.SetActive(false);
+        // Initialize UI - רק אם הפאנל לא כבר פעיל
+        if (!roomPanel.activeSelf)
+        {
+            roomPanel.SetActive(false);
+        }
 
         // Validate TextMeshProUGUI component
         if (roomIdText == null)
@@ -53,7 +56,16 @@ public class RoomManager : MonoBehaviour
 
     public void ShowRoomPanel()
     {
+        UnityEngine.Debug.Log($"ShowRoomPanel called. roomPanel null: {roomPanel == null}, roomPanel active: {roomPanel != null && roomPanel.activeSelf}");
+
+        if (roomPanel == null)
+        {
+            UnityEngine.Debug.LogError("RoomPanel is null! Make sure it's assigned in the inspector.");
+            return;
+        }
+
         roomPanel.SetActive(true);
+        UnityEngine.Debug.Log("RoomPanel set to active");
     }
 
     private async void CreateRoom()

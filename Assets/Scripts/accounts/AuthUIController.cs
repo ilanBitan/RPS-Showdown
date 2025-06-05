@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 public class AuthUIController : MonoBehaviour
 {
@@ -23,6 +24,7 @@ public class AuthUIController : MonoBehaviour
     public TMP_InputField signUpPassword;
     public TMP_InputField signUpConfirmPassword;
     public TMP_InputField signUpName;
+    public TextMeshProUGUI signUpErrorText;  // הוספת שדה הודעת שגיאה למסך signup
 
     [Header("Reset Password Fields")]
     public TMP_InputField resetPasswordEmail;  // New field for reset password email
@@ -261,7 +263,7 @@ public class AuthUIController : MonoBehaviour
         }
         else
         {
-            ShowErrorMessage(message);
+            ShowSignUpErrorMessage(message);
         }
     }
 
@@ -307,6 +309,7 @@ public class AuthUIController : MonoBehaviour
         resetPasswordPanel.SetActive(false);
         loadingPanel?.SetActive(false);
         ClearErrorMessage();
+        ClearSignUpErrorMessage();  // נקה גם הודעות signup
     }
 
     public void OpenSignUpPanel()
@@ -316,6 +319,8 @@ public class AuthUIController : MonoBehaviour
         profilePanel.SetActive(false);
         loadingPanel?.SetActive(false);
         ClearErrorMessage();
+        ClearSignUpErrorMessage();  // מחיקת הודעות שגיאה של signup
+        ClearSignUpFields();  // ניקוי שדות הקלט של signup
     }
 
     public void OpenProfilePanel()
@@ -396,22 +401,35 @@ public class AuthUIController : MonoBehaviour
     {
         if (isProcessingAuthentication) return;
 
+        // נקה הודעות שגיאה קודמות
+        ClearSignUpErrorMessage();
+
+        // בדיקת שדות ריקים
         if (string.IsNullOrEmpty(signUpEmail.text) || string.IsNullOrEmpty(signUpPassword.text) ||
             string.IsNullOrEmpty(signUpName.text))
         {
-            ShowErrorMessage("Please fill all fields");
+            ShowSignUpErrorMessage("Please fill all fields");
             return;
         }
 
+        // בדיקת תקינות אימייל
+        if (!IsValidEmail(signUpEmail.text))
+        {
+            ShowSignUpErrorMessage("Please enter a valid email address");
+            return;
+        }
+
+        // בדיקת התאמת סיסמאות
         if (signUpPassword.text != signUpConfirmPassword.text)
         {
-            ShowErrorMessage("Passwords do not match");
+            ShowSignUpErrorMessage("Passwords do not match");
             return;
         }
 
+        // בדיקת אורך סיסמה
         if (signUpPassword.text.Length < 6)
         {
-            ShowErrorMessage("Password must be at least 6 characters");
+            ShowSignUpErrorMessage("Password must be at least 6 characters");
             return;
         }
 
@@ -431,7 +449,8 @@ public class AuthUIController : MonoBehaviour
                 }
                 else
                 {
-                    ShowErrorMessage(message);
+                    HideLoadingPanel();
+                    ShowSignUpErrorMessage(message);
                 }
             });
     }
@@ -439,6 +458,7 @@ public class AuthUIController : MonoBehaviour
     private IEnumerator WaitForUserData()
     {
         yield return new WaitForSeconds(1f); // Wait for 1 second
+        ClearSignUpFields(); // נקה את השדות אחרי רישום מצליח
         OpenLoginPanel();
     }
 
@@ -563,6 +583,53 @@ public class AuthUIController : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
         SceneManager.LoadScene(sceneName);
+    }
+
+    private void ClearSignUpErrorMessage()
+    {
+        if (signUpErrorText != null)
+        {
+            signUpErrorText.text = "";
+            signUpErrorText.gameObject.SetActive(false);
+        }
+    }
+
+    private void ShowSignUpErrorMessage(string message)
+    {
+        if (signUpErrorText != null)
+        {
+            signUpErrorText.text = message;
+            signUpErrorText.gameObject.SetActive(true);
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+            return false;
+
+        try
+        {
+            // בדיקה בסיסית של פורמט אימייל
+            var emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+            return System.Text.RegularExpressions.Regex.IsMatch(email, emailPattern);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ClearSignUpFields()
+    {
+        if (signUpEmail != null)
+            signUpEmail.text = "";
+        if (signUpPassword != null)
+            signUpPassword.text = "";
+        if (signUpConfirmPassword != null)
+            signUpConfirmPassword.text = "";
+        if (signUpName != null)
+            signUpName.text = "";
     }
 
     #endregion

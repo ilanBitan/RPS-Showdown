@@ -33,9 +33,16 @@ public class GameMenuManager : MonoBehaviour
     {
         if (roomManager == null)
         {
+            roomManager = FindObjectOfType<RoomManager>();
+        }
+
+        if (roomManager == null)
+        {
             UnityEngine.Debug.LogError("RoomManager not found! Make sure it's attached to the RoomPanel.");
             return;
         }
+
+        UnityEngine.Debug.Log("Local Battle pressed - showing room panel");
         roomManager.ShowRoomPanel();
     }
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine.UI;
+using System;
 
 public class AIPlayerController : MonoBehaviour
 {
@@ -26,22 +27,22 @@ public class AIPlayerController : MonoBehaviour
     {
         if (PlayerController.gameEnded || !TurnManager.Instance.IsPlayerTurn(2))
         {
-            Debug.Log("🛑 Game ended or not AI's turn - AI stops.");
+            UnityEngine.Debug.Log("🛑 Game ended or not AI's turn - AI stops.");
             yield break;
         }
 
         yield return new WaitForSeconds(0.5f);
-        Debug.Log("🤖 AI is thinking...");
-        
+        UnityEngine.Debug.Log("🤖 AI is thinking...");
+
         // מוצא את כל היחידות שיכולות לזוז
         List<RPSUnit> movableUnits = FindObjectsOfType<RPSUnit>()
             .Where(u => u.playerId == 2 && u.IsMovable())
-            .OrderBy(_ => Random.value)
+            .OrderBy(_ => UnityEngine.Random.value)
             .ToList();
-        
+
         if (movableUnits.Count == 0)
         {
-            Debug.Log("🤖 No movable units. Ending turn.");
+            UnityEngine.Debug.Log("🤖 No movable units. Ending turn.");
             TurnManager.Instance?.EndTurn();
             yield break;
         }
@@ -56,26 +57,26 @@ public class AIPlayerController : MonoBehaviour
             foreach (var dir in directions)
             {
                 Vector2Int newPos = unit.Position + dir;
-                
+
                 // בדיקה שהמיקום בתוך הלוח
                 if (!BoardManager.Instance.IsInsideBoard(newPos))
                     continue;
 
                 var targetUnit = BoardManager.Instance.GetUnitAt(newPos) as RPSUnit;
-                
+
                 // אם המשבצת ריקה או שיש בה יחידת אויב (לא AI)
                 if (targetUnit == null || targetUnit.playerId != unit.playerId)
                 {
                     // אם יש יחידת אויב, בודקים שהיא בדיוק במיקום הזה
                     if (targetUnit != null && targetUnit.Position != newPos)
                         continue;
-                        
+
                     validMoves.Add(newPos);
                 }
             }
 
             // מערבב את המהלכים האפשריים
-            validMoves = validMoves.OrderBy(_ => Random.value).ToList();
+            validMoves = validMoves.OrderBy(_ => UnityEngine.Random.value).ToList();
 
             if (validMoves.Count > 0)
             {
@@ -85,25 +86,25 @@ public class AIPlayerController : MonoBehaviour
             }
         }
 
-        Debug.Log("🤖 No valid moves found for any unit. Ending turn.");
+        UnityEngine.Debug.Log("🤖 No valid moves found for any unit. Ending turn.");
         TurnManager.Instance?.EndTurn();
     }
 
     protected IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int targetPos)
     {
         var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
-        
+
         // בדיקה שהמהלך חוקי - רק צעד אחד
         Vector2Int delta = targetPos - unit.Position;
         if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
         {
-            Debug.Log($"🚫 Invalid move: Distance must be 1 step, tried to move from {unit.Position} to {targetPos}");
+            UnityEngine.Debug.Log($"🚫 Invalid move: Distance must be 1 step, tried to move from {unit.Position} to {targetPos}");
             yield break;
         }
-        
+
         if (targetUnit == null)
         {
-            Debug.Log($"🤖 AI moving {unit.name} to empty tile {targetPos}");
+            UnityEngine.Debug.Log($"🤖 AI moving {unit.name} to empty tile {targetPos}");
             unit.MoveTo(targetPos);
             yield return new WaitForSeconds(0.6f);
             TurnManager.Instance?.EndTurn();
@@ -113,7 +114,7 @@ public class AIPlayerController : MonoBehaviour
         // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
         if (targetUnit.Position != targetPos)
         {
-            Debug.Log($"🚫 Cannot attack: Target unit is at {targetUnit.Position} but move is to {targetPos}");
+            UnityEngine.Debug.Log($"🚫 Cannot attack: Target unit is at {targetUnit.Position} but move is to {targetPos}");
             yield break;
         }
 
@@ -124,7 +125,7 @@ public class AIPlayerController : MonoBehaviour
         // טיפול במקרה של מלכודת
         if (targetUnit.role == RPSUnit.UnitRole.Trap)
         {
-            Debug.Log("💥 AI stepped on trap and is destroyed.");
+            UnityEngine.Debug.Log("💥 AI stepped on trap and is destroyed.");
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -134,15 +135,15 @@ public class AIPlayerController : MonoBehaviour
         // טיפול במקרה של דגל
         if (targetUnit.role == RPSUnit.UnitRole.Flag)
         {
-            Debug.Log("🎯 AI captured the FLAG! YOU LOSE!");
+            UnityEngine.Debug.Log("🎯 AI captured the FLAG! YOU LOSE!");
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
             PlayerController.gameEnded = true;
-            
+
             // Set player as loser
             TurnTimerManager.Instance?.SetPlayerWon(false);
-            
+
             // Stop all game systems
             TurnManager.Instance?.StopGame();
             yield break;
@@ -151,14 +152,14 @@ public class AIPlayerController : MonoBehaviour
         // טיפול בקרב
         if (unit.Kind == targetUnit.Kind)
         {
-            Debug.Log("🤝 Same kind – triggering battle panel.");
+            UnityEngine.Debug.Log("🤝 Same kind – triggering battle panel.");
             BattleManager.Instance?.StartBattle(unit, targetUnit, targetPos);
             yield break;
         }
 
         if (unit.Beats(targetUnit))
         {
-            Debug.Log($"🏆 AI wins! {unit.Kind} beats {targetUnit.Kind}");
+            UnityEngine.Debug.Log($"🏆 AI wins! {unit.Kind} beats {targetUnit.Kind}");
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
@@ -169,7 +170,7 @@ public class AIPlayerController : MonoBehaviour
 
         if (targetUnit.Beats(unit))
         {
-            Debug.Log($"💀 AI loses. {targetUnit.Kind} beats {unit.Kind}");
+            UnityEngine.Debug.Log($"💀 AI loses. {targetUnit.Kind} beats {unit.Kind}");
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -177,7 +178,7 @@ public class AIPlayerController : MonoBehaviour
         }
 
         // במקרה שמשהו השתבש, נסיים את התור
-        Debug.Log("🔄 Unexpected case - ending turn");
+        UnityEngine.Debug.Log("🔄 Unexpected case - ending turn");
         TurnManager.Instance?.EndTurn();
         yield break;
     }
@@ -210,7 +211,7 @@ public class AIPlayerController : MonoBehaviour
         Vector2Int delta = target - unit.Position;
         if (!(Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1))
         {
-            Debug.Log($"🚫 Invalid move attempt from {unit.Position} to {target}");
+            UnityEngine.Debug.Log($"🚫 Invalid move attempt from {unit.Position} to {target}");
             TurnManager.Instance?.EndTurn();
             return;
         }
@@ -225,7 +226,7 @@ public class AIPlayerController : MonoBehaviour
 
             if (enemy.role == RPSUnit.UnitRole.Trap)
             {
-                Debug.Log($"💥 {unit.name} stepped on a TRAP at {target} and was destroyed");
+                UnityEngine.Debug.Log($"💥 {unit.name} stepped on a TRAP at {target} and was destroyed");
                 BoardManager.Instance.RemoveUnit(unit);
                 Destroy(unit.gameObject);
                 TurnManager.Instance?.EndTurn();
@@ -234,25 +235,31 @@ public class AIPlayerController : MonoBehaviour
 
             if (enemy.role == RPSUnit.UnitRole.Flag)
             {
-                Debug.Log($"🎯 {unit.name} captured the FLAG at {target}");
+                UnityEngine.Debug.Log($"🎯 {unit.name} captured the FLAG at {target}! YOU LOSE!");
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 BoardManager.Instance.PlaceUnit(unit, target);
                 unit.MoveTo(target);
                 PlayerController.gameEnded = true;
+
+                // Set player as loser
+                TurnTimerManager.Instance?.SetPlayerWon(false);
+
+                // Stop all game systems
+                TurnManager.Instance?.StopGame();
                 return;
             }
 
             if (unit.Kind == enemy.Kind)
             {
-                Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemy.name} at {target}");
+                UnityEngine.Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemy.name} at {target}");
                 BattleManager.Instance?.StartBattle(unit, enemy, target);
                 return;
             }
 
             if (unit.Beats(enemy))
             {
-                Debug.Log($"🏆 {unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
+                UnityEngine.Debug.Log($"🏆 {unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 BoardManager.Instance.PlaceUnit(unit, target);
@@ -260,14 +267,14 @@ public class AIPlayerController : MonoBehaviour
             }
             else
             {
-                Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
+                UnityEngine.Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
                 BoardManager.Instance.RemoveUnit(unit);
                 Destroy(unit.gameObject);
             }
         }
         else
         {
-            Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
+            UnityEngine.Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
             unit.TryMove(target - unit.Position);
         }
 

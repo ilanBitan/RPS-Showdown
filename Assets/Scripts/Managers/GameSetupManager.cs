@@ -761,20 +761,35 @@ public class GameSetupManager : MonoBehaviour
             }
         }
 
-        bool playerStarts = UnityEngine.Random.Range(0, 2) == 0;
-
-        if (playerStarts)
+        if (mode == GameMode.PvP)
         {
-            UnityEngine.Debug.Log("[GameSetup] 🎯 Player 1 starts the game!");
-            TurnManager.Instance?.StartPlayerTurn();
+            // In PvP mode, host always starts
+            if (isHost)
+            {
+                UnityEngine.Debug.Log("[GameSetup] 🎯 Host starts the game!");
+                TurnManager.Instance?.StartPlayerTurn();
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[GameSetup] ⏳ Guest waiting for host's turn...");
+                TurnManager.Instance?.StartAITurn();
+            }
         }
         else
         {
-            UnityEngine.Debug.Log("[GameSetup] 🤖 AI/Player 2 starts the game!");
-            TurnManager.Instance?.StartAITurn();
+            // In PvE mode, random start
+            bool playerStarts = UnityEngine.Random.Range(0, 2) == 0;
 
-            if (mode != GameMode.PvP)
+            if (playerStarts)
             {
+                UnityEngine.Debug.Log("[GameSetup] 🎯 Player 1 starts the game!");
+                TurnManager.Instance?.StartPlayerTurn();
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[GameSetup] 🤖 AI/Player 2 starts the game!");
+                TurnManager.Instance?.StartAITurn();
+
                 AIPlayerController ai = FindObjectOfType<AIPlayerController>();
                 if (ai != null)
                 {
