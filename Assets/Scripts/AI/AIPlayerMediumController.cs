@@ -292,4 +292,43 @@ public class AIPlayerMediumController : AIPlayerController
 
         return true;
     }
+
+
+
+     private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
+    {
+ 
+        if (attacker.Beats(defender))
+        {
+            Debug.Log($"🏆 {attacker.name} wins the battle at {target}: {attacker.Kind} beats {defender.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = attacker.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(defender);
+            Destroy(defender.gameObject);
+            BoardManager.Instance.PlaceUnit(attacker, target);
+            attacker.MoveTo(target);
+        }
+        else
+        {
+            Debug.Log($"💀 {attacker.name} loses the battle at {target}: {defender.Kind} beats {attacker.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = defender.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(attacker);
+            Destroy(attacker.gameObject);
+        }
+
+        TurnManager.Instance?.EndTurn();
+    }
 }

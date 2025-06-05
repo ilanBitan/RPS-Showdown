@@ -148,7 +148,7 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // טיפול בקרב
+        // טיפול בקרב - עם אנימציה לכל סוג קרב
         if (unit.Kind == targetUnit.Kind)
         {
             Debug.Log("🤝 Same kind – triggering battle panel.");
@@ -156,9 +156,29 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
+        // ✨ הוספת אנימציית קרב לכל המקרים
+        if (FightAnimationManager.Instance != null)
+        {
+            // עדכון תצוגת הנשקים
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(targetUnit.Kind, unit.Kind);
+            
+            // הפעלת אנימציית הקרב
+            yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+            
+            // עדכון הספרייטים לפני התוצאה
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(targetUnit.Kind, unit.Kind);
+        }
+
         if (unit.Beats(targetUnit))
         {
             Debug.Log($"🏆 AI wins! {unit.Kind} beats {targetUnit.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(false, true));
+            }
+            
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
@@ -170,6 +190,13 @@ public class AIPlayerController : MonoBehaviour
         if (targetUnit.Beats(unit))
         {
             Debug.Log($"💀 AI loses. {targetUnit.Kind} beats {unit.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(true, false));
+            }
+            
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -250,28 +277,51 @@ public class AIPlayerController : MonoBehaviour
                 return;
             }
 
-            if (unit.Beats(enemy))
-            {
-                Debug.Log($"🏆 {unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-            }
-            else
-            {
-                Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-            }
+            // ✨ קרב עם אנימציה - הוצא מהתנאי הקודם
+            StartCoroutine(ExecuteCombatWithAnimation(unit, enemy, target));
         }
         else
         {
             Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
             unit.TryMove(target - unit.Position);
         }
+    }
+
+    // ✨ פונקציה חדשה לטיפול בקרב עם אנימציה
+    private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
+    {
+ 
+        if (attacker.Beats(defender))
+        {
+            Debug.Log($"🏆 {attacker.name} wins the battle at {target}: {attacker.Kind} beats {defender.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = attacker.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(defender);
+            Destroy(defender.gameObject);
+            BoardManager.Instance.PlaceUnit(attacker, target);
+            attacker.MoveTo(target);
+        }
+        else
+        {
+            Debug.Log($"💀 {attacker.name} loses the battle at {target}: {defender.Kind} beats {attacker.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = defender.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(attacker);
+            Destroy(attacker.gameObject);
+        }
 
         TurnManager.Instance?.EndTurn();
     }
 }
-

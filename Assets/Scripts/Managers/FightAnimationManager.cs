@@ -16,6 +16,9 @@ public class FightAnimationManager : MonoBehaviour
 
     public GameObject playerWeaponDisplay;
     public GameObject enemyWeaponDisplay;
+    
+    private bool playIntro = true;
+
 
 private void Awake()
     {
