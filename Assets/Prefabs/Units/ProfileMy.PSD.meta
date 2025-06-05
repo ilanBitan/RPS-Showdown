@@ -1,0 +1,423 @@
+fileFormatVersion: 2
+guid: 99c5b381db02e8b4580a42f837958182
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: head
+      rect:
+        serializedVersion: 2
+        x: 1239
+        y: 2506
+        width: 432
+        height: 411
+      alignment: 9
+      pivot: {x: 0.43714002, y: 0.1779007}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a76c0476d1b093641bbb10fe7e7f4edb
+      internalID: 645652941
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: frontArm
+      rect:
+        serializedVersion: 2
+        x: 462
+        y: 1712
+        width: 340
+        height: 794
+      alignment: 9
+      pivot: {x: 0.73960716, y: 0.9189604}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cba64518cf64693469edb1f788954303
+      internalID: -1565907610
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: innerArm
+      rect:
+        serializedVersion: 2
+        x: 2137
+        y: 1758
+        width: 295
+        height: 775
+      alignment: 9
+      pivot: {x: 0.26815414, y: 0.8762283}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c6d92ad67b3e457439d0ff2f362c81a6
+      internalID: -1307998001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: torso
+      rect:
+        serializedVersion: 2
+        x: 1270
+        y: 1414
+        width: 473
+        height: 799
+      alignment: 9
+      pivot: {x: 0.53805184, y: 0.076504625}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6d460b077ab38314b97c896e3a8db523
+      internalID: 1272713349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: leftHip
+      rect:
+        serializedVersion: 2
+        x: 599
+        y: 717
+        width: 374
+        height: 641
+      alignment: 9
+      pivot: {x: 0.59624916, y: 0.86502546}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 09518f392189b52419e5c1b38a5a7bb7
+      internalID: -1037873305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: rightHip
+      rect:
+        serializedVersion: 2
+        x: 1847
+        y: 661
+        width: 281
+        height: 599
+      alignment: 9
+      pivot: {x: 0.3792021, y: 0.88534456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a4d5a628e6624e34f8a9b60a8c33d056
+      internalID: 1688524767
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: leftFoot
+      rect:
+        serializedVersion: 2
+        x: 2370
+        y: 28
+        width: 275
+        height: 615
+      alignment: 9
+      pivot: {x: 0.5864036, y: 0.91947496}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 49aa55ba93d1b6046b2d0df15041443a
+      internalID: 9135206
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: rightFoot
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 25
+        width: 361
+        height: 603
+      alignment: 9
+      pivot: {x: 0.39031348, y: 0.8522113}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2c359c31f0b19ad4d8dc053511df7512
+      internalID: -1209416387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      ProfileMy_0: 807664076
+      ProfileMy_1: -426636308
+      ProfileMy_10: 1207313606
+      ProfileMy_100: 1587211018
+      ProfileMy_101: -863303810
+      ProfileMy_102: -957821449
+      ProfileMy_103: -1319990713
+      ProfileMy_104: -1223128470
+      ProfileMy_105: -176698973
+      ProfileMy_107: -2003617685
+      ProfileMy_109: -736482604
+      ProfileMy_110: 1955096716
+      ProfileMy_111: -1917979265
+      ProfileMy_112: 2074413479
+      ProfileMy_113: -1782859935
+      ProfileMy_114: 667731759
+      ProfileMy_115: -2098359835
+      ProfileMy_116: -1010393118
+      ProfileMy_117: 889722682
+      ProfileMy_118: 1614063205
+      ProfileMy_119: -1110587152
+      ProfileMy_12: 209061346
+      ProfileMy_120: 1592369080
+      ProfileMy_121: -899935267
+      ProfileMy_122: -1444103854
+      ProfileMy_123: 1695796002
+      ProfileMy_124: 684514894
+      ProfileMy_125: 1008641915
+      ProfileMy_126: 2011664909
+      ProfileMy_127: -810765491
+      ProfileMy_13: -1780998479
+      ProfileMy_14: -1304660458
+      ProfileMy_15: 1309622232
+      ProfileMy_16: 1500978663
+      ProfileMy_17: 526673742
+      ProfileMy_18: 270972567
+      ProfileMy_19: -28266001
+      ProfileMy_2: 1424394425
+      ProfileMy_20: 746625254
+      ProfileMy_21: -686821010
+      ProfileMy_22: 650229016
+      ProfileMy_23: 741135285
+      ProfileMy_24: 524798862
+      ProfileMy_25: 1249413484
+      ProfileMy_26: 154608108
+      ProfileMy_27: 1617043455
+      ProfileMy_28: -2026420424
+      ProfileMy_29: -591125423
+      ProfileMy_3: -212702640
+      ProfileMy_30: 252465460
+      ProfileMy_31: -263513135
+      ProfileMy_32: -1104779164
+      ProfileMy_33: -1044356004
+      ProfileMy_34: 1366452985
+      ProfileMy_35: 1311366171
+      ProfileMy_36: -371570421
+      ProfileMy_37: 805166148
+      ProfileMy_38: 117095514
+      ProfileMy_4: 1422889605
+      ProfileMy_40: 193198360
+      ProfileMy_41: -308065578
+      ProfileMy_42: -1239550470
+      ProfileMy_43: 1731906731
+      ProfileMy_44: -1731375465
+      ProfileMy_45: 1865840064
+      ProfileMy_47: 1060934879
+      ProfileMy_48: 1483889517
+      ProfileMy_5: 399757775
+      ProfileMy_50: 74213123
+      ProfileMy_51: -1526642635
+      ProfileMy_52: 221301905
+      ProfileMy_53: -686306984
+      ProfileMy_54: 1069055666
+      ProfileMy_55: 900366007
+      ProfileMy_56: 122781878
+      ProfileMy_57: -914802279
+      ProfileMy_58: 1285478608
+      ProfileMy_59: 1067921838
+      ProfileMy_6: 635669707
+      ProfileMy_60: -759507530
+      ProfileMy_61: -171478477
+      ProfileMy_62: 1326475111
+      ProfileMy_63: -670228687
+      ProfileMy_64: -36825695
+      ProfileMy_65: -1755982461
+      ProfileMy_67: -2025340449
+      ProfileMy_69: -1970191376
+      ProfileMy_7: -1959463317
+      ProfileMy_70: 2031756934
+      ProfileMy_71: -2072693190
+      ProfileMy_72: -1561811042
+      ProfileMy_73: -1128023032
+      ProfileMy_74: 1160815558
+      ProfileMy_75: -1897586616
+      ProfileMy_76: 1364482135
+      ProfileMy_77: 655182668
+      ProfileMy_78: 805479083
+      ProfileMy_79: -622277783
+      ProfileMy_8: 362301996
+      ProfileMy_80: 1223711786
+      ProfileMy_81: 922659559
+      ProfileMy_82: 751243170
+      ProfileMy_83: -1925745250
+      ProfileMy_84: 1759429133
+      ProfileMy_85: -2037084021
+      ProfileMy_86: -124867791
+      ProfileMy_87: 2104191417
+      ProfileMy_88: 529813724
+      ProfileMy_89: -478114689
+      ProfileMy_9: -488237063
+      ProfileMy_90: -2141075662
+      ProfileMy_91: 1909031415
+      ProfileMy_92: -1404521751
+      ProfileMy_93: 418154369
+      ProfileMy_94: -762713319
+      ProfileMy_95: -579300554
+      ProfileMy_96: -1273296406
+      ProfileMy_97: -1962904001
+      ProfileMy_98: 682839132
+      ProfileMy_99: 540676420
+      frontArm: -1565907610
+      head: 645652941
+      innerArm: -1307998001
+      leftFoot: 9135206
+      leftHip: -1037873305
+      rightFoot: -1209416387
+      rightHip: 1688524767
+      torso: 1272713349
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

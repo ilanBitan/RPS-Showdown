@@ -1957,7 +1957,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1500120401, guid: e267e818da2267947943c19f8dba0dba, type: 3}
+  m_Sprite: {fileID: 1272713349, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2422,14 +2422,30 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1674991505}
     m_Modifications:
+    - target: {fileID: 1714540928158982136, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1307998001, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
     - target: {fileID: 1783263035425594053, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 7044c0bd0f7b58347abab6c75c431a8b, type: 2}
+    - target: {fileID: 2191327644391625430, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2578779111198419651, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1037873305, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
     - target: {fileID: 3057321317768874072, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 558116667, guid: e267e818da2267947943c19f8dba0dba, type: 3}
+      objectReference: {fileID: 9135206, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
+    - target: {fileID: 3717443435841050833, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 1688524767, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
     - target: {fileID: 5159876543238118405, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0.023127735
@@ -2440,20 +2456,24 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5172981868988916612, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -0.20188046
+      value: -0.026911914
       objectReference: {fileID: 0}
     - target: {fileID: 5172981868988916612, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -1.8253403
+      value: -1.8786879
       objectReference: {fileID: 0}
     - target: {fileID: 6174914207857419011, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.044850647
+      value: 0.05763209
       objectReference: {fileID: 0}
     - target: {fileID: 6174914207857419011, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -2.1172323
+      value: -2.3237133
       objectReference: {fileID: 0}
+    - target: {fileID: 6505087067264394056, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1565907610, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
     - target: {fileID: 6508112129288002099, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.1283684
@@ -2506,9 +2526,41 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7605577871268930451, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1565907610, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
+    - target: {fileID: 7675265357189281207, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1209416387, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
     - target: {fileID: 7976224916124337594, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
       propertyPath: m_Name
       value: 'FightPlayer '
+      objectReference: {fileID: 0}
+    - target: {fileID: 8367556744817682071, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8829771839361710216, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 1272713349, guid: 99c5b381db02e8b4580a42f837958182, type: 3}
+    - target: {fileID: 8829771839361710216, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Color.b
+      value: 0.49803925
+      objectReference: {fileID: 0}
+    - target: {fileID: 8829771839361710216, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Color.g
+      value: 0.49803925
+      objectReference: {fileID: 0}
+    - target: {fileID: 8829771839361710216, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_Color.r
+      value: 0.49803925
+      objectReference: {fileID: 0}
+    - target: {fileID: 8829771839361710216, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4238573948005111685, guid: a9301786702f5074bbfc4e38673f6866, type: 3}
@@ -2699,7 +2751,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1791520485
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2847,17 +2899,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battlePanel: {fileID: 1603598233}
-  fightPanel: {fileID: 1791520484}
-  fightPlayer: {fileID: 1256305238}
-  fightEnemy: {fileID: 837558462}
   rockButton: {fileID: 307285541}
   paperButton: {fileID: 14213810}
   scissorsButton: {fileID: 335889142}
-  rockSprite: {fileID: -1203330386, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
-  paperSprite: {fileID: 2105449755, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
-  scissorsSprite: {fileID: -814062723, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
-  playerWeaponDisplay: {fileID: 1556715464}
-  enemyWeaponDisplay: {fileID: 470766690}
 --- !u!4 &1796526415
 Transform:
   m_ObjectHideFlags: 0

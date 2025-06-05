@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-
+//seperate after fixing!!!
 public class FightAnimationManager : MonoBehaviour
 {
     public static FightAnimationManager Instance;
@@ -17,12 +17,35 @@ public class FightAnimationManager : MonoBehaviour
     public GameObject playerWeaponDisplay;
     public GameObject enemyWeaponDisplay;
 
-    private void Awake()
+private void Awake()
     {
         if (Instance != null && Instance != this)
             Destroy(gameObject);
         else
             Instance = this;
+
+        fightPanel?.SetActive(false);
+    }
+
+    public void UpdatePreChoiceWeaponDisplay(RPSUnit.RPSKind playerKind, RPSUnit.RPSKind aiKind)
+    {
+        if (playerWeaponDisplay != null)
+        {
+            Image playerImage = playerWeaponDisplay.GetComponent<Image>();
+            if (playerImage != null)
+            {
+                playerImage.sprite = GetSpriteForChoice(playerKind);
+            }
+        }
+
+        if (enemyWeaponDisplay != null)
+        {
+            Image enemyImage = enemyWeaponDisplay.GetComponent<Image>();
+            if (enemyImage != null)
+            {
+                enemyImage.sprite = GetSpriteForChoice(aiKind);
+            }
+        }
     }
 
     public IEnumerator PlayFightIntroAnimation()
@@ -38,9 +61,8 @@ public class FightAnimationManager : MonoBehaviour
         fightPanel?.SetActive(false);
     }
 
-    public void UpdateWeaponDisplays(RPSUnit.RPSKind playerChoice, RPSUnit.RPSKind aiChoice)
+    public void UpdateFightDisplaySprites(RPSUnit.RPSKind playerChoice, RPSUnit.RPSKind aiChoice)
     {
-        // Update player weapon display
         if (playerWeaponDisplay != null)
         {
             Image playerImage = playerWeaponDisplay.GetComponent<Image>();
@@ -50,7 +72,6 @@ public class FightAnimationManager : MonoBehaviour
             }
         }
 
-        // Update enemy weapon display
         if (enemyWeaponDisplay != null)
         {
             Image enemyImage = enemyWeaponDisplay.GetComponent<Image>();
@@ -61,7 +82,7 @@ public class FightAnimationManager : MonoBehaviour
         }
     }
 
-    public IEnumerator PlayFightResultAnimation(bool playerWon, bool aiWon)
+    public IEnumerator ShowFightResult(bool playerWon, bool aiWon)
     {
         fightPanel?.SetActive(true);
 
