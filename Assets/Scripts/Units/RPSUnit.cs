@@ -260,7 +260,7 @@ public class RPSUnit : Unit
             {
                 UnityEngine.Debug.Log("💥 Trap triggered! Unit destroyed.");
                 BoardManager.Instance.RemoveUnit(this);
-                Destroy(this.gameObject);
+                StartCoroutine(PlayJumpAndRemove(this.gameObject));
                 return false;
             }
 
@@ -268,7 +268,7 @@ public class RPSUnit : Unit
             {
                 UnityEngine.Debug.Log("🎯 Flag captured!");
                 BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
+    StartCoroutine(PlayJumpAndRemove(enemy.gameObject));
                 MoveTo(targetPos);
                 //BoardManager.Instance.PlaceUnit(this, targetPos);
 
@@ -288,13 +288,14 @@ public class RPSUnit : Unit
                     BattleManager.Instance.StartBattle(this, enemy, targetPos);
                 return false;
             }
-            StartCoroutine(HandleBattle(this, enemy, targetPos));
 
+
+        // Wait for animation to start
             if (Beats(enemy))
             {
                 UnityEngine.Debug.Log($"✅ {name} wins – replacing {enemy.name}");
                 BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
+    StartCoroutine(PlayJumpAndRemove(enemy.gameObject));
                 MoveTo(targetPos);
                 //BoardManager.Instance.PlaceUnit(this, targetPos);
                 return true;
@@ -304,7 +305,7 @@ public class RPSUnit : Unit
             {
                 UnityEngine.Debug.Log($"💀 {name} loses to {enemy.name} and is destroyed");
                 BoardManager.Instance.RemoveUnit(this);
-                Destroy(this.gameObject);
+    StartCoroutine(PlayJumpAndRemove(this.gameObject));
                 return false;
             }
 
@@ -390,23 +391,20 @@ public class RPSUnit : Unit
 
 
 
-    private IEnumerator HandleBattle(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos)
+private IEnumerator PlayJumpAndRemove(GameObject unitObject, float delay = 0.5f)
 {
-    bool attackerWins = attacker.Beats(defender);
-    bool defenderWins = defender.Beats(attacker);
+    Animator anim = unitObject.GetComponent<Animator>();
+    if (anim != null)
+    {
+        anim.SetInteger("playerId", playerId);
+        anim.ResetTrigger("jump");
+        anim.SetTrigger("jump");
+    }
 
-    // Reveal both units
-    attacker.Reveal();
-    defender.Reveal();
+    yield return new WaitForSeconds(delay);
 
-    // Play animation
-    yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(attackerWins, defenderWins));
-
-    // Handle result
-
-    // Optional: clean selection or trigger round end
-    foreach (var controller in FindObjectsOfType<PlayerController>())
-        controller.ClearSelection();
+    Destroy(unitObject);
 }
+
 
 }
