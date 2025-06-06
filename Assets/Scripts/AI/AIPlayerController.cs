@@ -163,7 +163,7 @@ public class AIPlayerController : MonoBehaviour
             FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(targetUnit.Kind, unit.Kind);
             
             // הפעלת אנימציית הקרב
-            yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
             
             // עדכון הספרייטים לפני התוצאה
             FightAnimationManager.Instance.UpdateFightDisplaySprites(targetUnit.Kind, unit.Kind);
@@ -290,6 +290,35 @@ public class AIPlayerController : MonoBehaviour
     // ✨ פונקציה חדשה לטיפול בקרב עם אנימציה
     private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
     {
+
+
+
+         if (FightAnimationManager.Instance != null)
+        {
+            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
+            bool isPlayerAttacking = attacker.playerId == 1;
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
+            }
+            
+            // הפעלת אנימציית הקרב
+           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+            
+            // עדכון הספרייטים
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(defender.Kind, attacker.Kind);
+            }
+        }
  
         if (attacker.Beats(defender))
         {
