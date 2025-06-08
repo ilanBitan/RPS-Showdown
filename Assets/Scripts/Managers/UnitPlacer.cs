@@ -47,6 +47,19 @@ public class UnitPlacer : MonoBehaviour
         {
             UnityEngine.Debug.Log($"[UnitPlacer] Starting PvP setup with RoomId: {currentRoomId}");
             GameSetupManager.Instance.StartSetup(player1Units, player2Units, roomId, isHost);
+
+            // Initialize PvP Move Logger
+            if (PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.Initialize(roomId, isHost);
+            }
+            else
+            {
+                // Create PvPMoveLogger if it doesn't exist
+                GameObject loggerObj = new GameObject("PvPMoveLogger");
+                PvPMoveLogger logger = loggerObj.AddComponent<PvPMoveLogger>();
+                logger.Initialize(roomId, isHost);
+            }
         }
     }
 

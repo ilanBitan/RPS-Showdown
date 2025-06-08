@@ -216,6 +216,9 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // Store original position for logging
+        Vector2Int originalPosition = unit.Position;
+
         foreach (var other in FindObjectsOfType<RPSUnit>())
         {
             if (other == null) continue;
@@ -237,6 +240,12 @@ public class PlayerController : MonoBehaviour
                     ClearSelection();
                     gameEnded = true;
 
+                    // Log move for PvP
+                    if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                    {
+                        PvPMoveLogger.Instance.LogPlayerMove(originalPosition, target);
+                    }
+
                     // Set player as winner
                     TurnTimerManager.Instance?.SetPlayerWon(true);
 
@@ -252,25 +261,28 @@ public class PlayerController : MonoBehaviour
                     unit.Reveal();
                     Destroy(unit.gameObject);
                     ClearSelection();
+
+                    // Log move for PvP before ending turn
+                    if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                    {
+                        PvPMoveLogger.Instance.LogPlayerMove(originalPosition, target);
+                    }
+
                     TurnManager.Instance?.EndTurn();
                     return;
                 }
-
-                // 🏁 FLAG
-                //if (other.role == RPSUnit.UnitRole.Flag)
-                //{
-                //    Debug.Log("🎉 You captured the enemy FLAG! YOU WIN!");
-                //    Destroy(other.gameObject);
-                //    MoveUnitTo(unit, target);
-                //    ClearSelection();
-                //    Debug.Log($"🏆 Player {myPlayerId} wins the game!");
-                //    return;
-                //}
 
                 // 🔁 RPS Battle
                 if (unit.Kind == other.Kind)
                 {
                     UnityEngine.Debug.Log("⚔️ Equal kinds – entering RPS battle mode!");
+
+                    // Log move for PvP before battle
+                    if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                    {
+                        PvPMoveLogger.Instance.LogPlayerMove(originalPosition, target);
+                    }
+
                     BattleManager.Instance?.StartBattle(unit, other, target);
                     return;
                 }
@@ -292,13 +304,27 @@ public class PlayerController : MonoBehaviour
                     Destroy(unit.gameObject);
                 }
 
+                // Log move for PvP
+                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                {
+                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, target);
+                }
+
                 ClearSelection();
                 TurnManager.Instance?.EndTurn();
                 return;
             }
         }
 
+        // Normal move to empty space
         MoveUnitTo(unit, target);
+
+        // Log move for PvP
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            PvPMoveLogger.Instance.LogPlayerMove(originalPosition, target);
+        }
+
         ClearSelection();
         TurnManager.Instance?.EndTurn();
     }

@@ -240,6 +240,9 @@ public class RPSUnit : Unit
             return false;
         }
 
+        // Store original position for logging
+        Vector2Int originalPosition = Position;
+
         Unit target = BoardManager.Instance.GetUnitAt(targetPos);
 
         if (target != null)
@@ -263,6 +266,13 @@ public class RPSUnit : Unit
             if (enemy.role == UnitRole.Trap)
             {
                 UnityEngine.Debug.Log("💥 Trap triggered! Unit destroyed.");
+
+                // Log move for PvP before destruction
+                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                {
+                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+                }
+
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
@@ -276,47 +286,65 @@ public class RPSUnit : Unit
                 MoveTo(targetPos);
                 BoardManager.Instance.PlaceUnit(this, targetPos);
 
-                /*     // ✨ הצג את מסך הניצחון
-                     GameEndHandler handler = FindObjectOfType<GameEndHandler>();
-                     if (handler != null)
-                         handler.ShowVictory(playerId == 1 ? "Player 1" : "Player 2");
-     */
+                // Log move for PvP
+                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                {
+                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+                }
+
                 return true;
             }
 
-
-            if (Kind == enemy.Kind)
+            // Battle logic
+            if (this.Kind == enemy.Kind)
             {
-                UnityEngine.Debug.Log("⚔️ Equal units – triggering RPS battle");
-                if (BattleManager.Instance != null)
-                    BattleManager.Instance.StartBattle(this, enemy, targetPos);
-                return false;
+                UnityEngine.Debug.Log("⚔️ Same type battle!");
+
+                // Log move for PvP before battle
+                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+                {
+                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+                }
+
+                BattleManager.Instance?.StartBattle(this, enemy, targetPos);
+                return true;
             }
 
-            if (Beats(enemy))
+            if (this.Beats(enemy))
             {
-                UnityEngine.Debug.Log($"✅ {name} wins – replacing {enemy.name}");
+                UnityEngine.Debug.Log($"✅ {this.Kind} beats {enemy.Kind}!");
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
                 BoardManager.Instance.PlaceUnit(this, targetPos);
-                return true;
             }
-
-            if (enemy.Beats(this))
+            else
             {
-                UnityEngine.Debug.Log($"💀 {name} loses to {enemy.name} and is destroyed");
+                UnityEngine.Debug.Log($"❌ {enemy.Kind} beats {this.Kind}!");
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
             }
 
-            UnityEngine.Debug.Log("❓ Unhandled combat case");
-            return false;
+            // Log move for PvP
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
+
+            return true;
         }
 
+        // Empty space movement
         MoveTo(targetPos);
         BoardManager.Instance.PlaceUnit(this, targetPos);
+
+        // Log move for PvP
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+        }
+
         return true;
     }
 
