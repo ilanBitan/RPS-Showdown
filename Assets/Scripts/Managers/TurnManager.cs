@@ -46,6 +46,13 @@ public class TurnManager : MonoBehaviour
         TurnTimerManager.Instance?.StartTurn();
     }
 
+    public void StartGuestTurn()
+    {
+        if (!gameActive) return;
+        isPlayer1Turn = true;
+        TurnTimerManager.Instance?.StartTurn();
+    }
+
     public void EndTurn()
     {
         if (!gameActive) return;

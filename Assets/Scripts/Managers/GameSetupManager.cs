@@ -772,7 +772,7 @@ public class GameSetupManager : MonoBehaviour
             else
             {
                 UnityEngine.Debug.Log("[GameSetup] ⏳ Guest waiting for host's turn...");
-                TurnManager.Instance?.StartAITurn();
+                TurnManager.Instance?.StartGuestTurn();
             }
         }
         else
@@ -838,4 +838,7 @@ public class GameSetupManager : MonoBehaviour
     }
 
     public bool IsSetupComplete() => setupComplete;
+
+    // Method to expose host status for PlayerController
+    public bool IsHost() => isHost;
 }

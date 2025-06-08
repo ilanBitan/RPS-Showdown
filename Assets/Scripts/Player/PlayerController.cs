@@ -29,6 +29,38 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         gameEnded = false;
+
+        // Set correct playerId for PvP mode
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && GameSetupManager.Instance != null)
+        {
+            // In PvP mode, set playerId based on host/guest status
+            // This will be set once GameSetupManager has determined the role
+            StartCoroutine(WaitForRoleAndSetPlayerId());
+        }
+    }
+
+    private System.Collections.IEnumerator WaitForRoleAndSetPlayerId()
+    {
+        // Wait until GameSetupManager has determined the role
+        while (GameSetupManager.Instance == null)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // Wait a bit more to ensure the role has been set
+        yield return new WaitForSeconds(0.5f);
+
+        // Set playerId based on host/guest status
+        if (GameSetupManager.Instance.IsHost())
+        {
+            myPlayerId = 1; // Host is player 1
+            UnityEngine.Debug.Log("[PlayerController] Set as HOST (Player 1)");
+        }
+        else
+        {
+            myPlayerId = 2; // Guest is player 2
+            UnityEngine.Debug.Log("[PlayerController] Set as GUEST (Player 2)");
+        }
     }
 
     void Update()
@@ -44,11 +76,26 @@ public class PlayerController : MonoBehaviour
         // Support for both keyboard and touch/click input
         Vector2Int direction = Vector2Int.zero;
 
-        // Arrow key movement
-        if (Input.GetKeyDown(KeyCode.UpArrow)) direction = Vector2Int.down;
-        else if (Input.GetKeyDown(KeyCode.DownArrow)) direction = Vector2Int.up;
-        else if (Input.GetKeyDown(KeyCode.LeftArrow)) direction = Vector2Int.left;
-        else if (Input.GetKeyDown(KeyCode.RightArrow)) direction = Vector2Int.right;
+        // Determine if we need to reverse directions for guest player in PvP mode
+        bool isGuestInPvP = (GameModeManager.Instance.SelectedMode == GameMode.PvP && myPlayerId == 2);
+
+        // Arrow key movement - reversed for guest players
+        if (isGuestInPvP)
+        {
+            // Guest perspective: up arrow should move towards host (increase Y), down arrow away from host (decrease Y)
+            if (Input.GetKeyDown(KeyCode.UpArrow)) direction = Vector2Int.up;
+            else if (Input.GetKeyDown(KeyCode.DownArrow)) direction = Vector2Int.down;
+            else if (Input.GetKeyDown(KeyCode.LeftArrow)) direction = Vector2Int.left;
+            else if (Input.GetKeyDown(KeyCode.RightArrow)) direction = Vector2Int.right;
+        }
+        else
+        {
+            // Host/PvE perspective: up arrow moves up the board (decrease Y), down arrow moves down (increase Y)
+            if (Input.GetKeyDown(KeyCode.UpArrow)) direction = Vector2Int.down;
+            else if (Input.GetKeyDown(KeyCode.DownArrow)) direction = Vector2Int.up;
+            else if (Input.GetKeyDown(KeyCode.LeftArrow)) direction = Vector2Int.left;
+            else if (Input.GetKeyDown(KeyCode.RightArrow)) direction = Vector2Int.right;
+        }
 
         if (direction != Vector2Int.zero)
         {
@@ -130,7 +177,7 @@ public class PlayerController : MonoBehaviour
         // Clear unit outline
         if (activeOutline != null)
             Destroy(activeOutline);
-        
+
         // Clear tile highlights
         foreach (Transform tile in GameObject.Find("Board").transform)
         {
@@ -189,10 +236,10 @@ public class PlayerController : MonoBehaviour
                     Destroy(other.gameObject);
                     ClearSelection();
                     gameEnded = true;
-                    
+
                     // Set player as winner
                     TurnTimerManager.Instance?.SetPlayerWon(true);
-                    
+
                     // Stop all game systems
                     TurnManager.Instance?.StopGame();
                     return;

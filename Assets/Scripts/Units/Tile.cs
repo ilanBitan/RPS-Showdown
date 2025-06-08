@@ -66,7 +66,7 @@ public class Tile : MonoBehaviour, IPointerClickHandler
 
         // Calculate the movement direction from selected unit to clicked tile
         Vector2Int direction = Position - selectedUnit.Position;
-        
+
         // Check if the clicked position is adjacent (exactly one step in any direction)
         bool isAdjacent = Mathf.Abs(direction.x) + Mathf.Abs(direction.y) == 1;
 
