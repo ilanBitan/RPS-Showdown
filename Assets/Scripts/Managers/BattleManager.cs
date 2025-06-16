@@ -52,10 +52,16 @@ public class BattleManager : MonoBehaviour
         targetPos = target;
         isBattleActive = true;
 
+        // If in PvP mode, use PvPMoveLogger
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            PvPMoveLogger.Instance.StartBattle(playerUnit, aiUnit, targetPos);
+        }
+
         ShowPlayerPanel();
     }
 
-    private void ShowPlayerPanel()
+    public void ShowPlayerPanel()
     {
         battlePanel?.SetActive(true);
 
@@ -72,6 +78,13 @@ public class BattleManager : MonoBehaviour
     private void OnPlayerChoice(RPSUnit.RPSKind choice)
     {
         playerChoice = choice;
+
+        // If in PvP mode, log the choice to server
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            PvPMoveLogger.Instance.LogBattleChoice(choice);
+            return;
+        }
 
         // בדיקה אם זו רמה קשה
         bool isHardLevel = FindObjectOfType<AIPlayerHardController>() != null;
@@ -228,5 +241,14 @@ public class BattleManager : MonoBehaviour
     public bool IsBattleActive()
     {
         return isBattleActive;
+    }
+
+    public void SetBattleActive(bool active)
+    {
+        isBattleActive = active;
+        if (!active)
+        {
+            battlePanel?.SetActive(false);
+        }
     }
 }
