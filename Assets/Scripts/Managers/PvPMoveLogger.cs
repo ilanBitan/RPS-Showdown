@@ -394,97 +394,122 @@ public class PvPMoveLogger : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Execute opponent move using the same logic as ExecuteMoveSequence
-    /// </summary>
-    private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
+// In PvPMoveLogger.cs, replace the ExecuteOpponentMove method with this fixed version:
+
+/// <summary>
+/// Execute opponent move using the same logic as ExecuteMoveSequence
+/// </summary>
+private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
+{
+    UnityEngine.Debug.Log($"[PvPMoveLogger] Executing opponent move: {unit.name} (Player {unit.playerId}) from {unit.Position} to {targetPos}");
+
+    // Ensure unit still exists and is valid
+    if (unit == null)
     {
-        UnityEngine.Debug.Log($"[PvPMoveLogger]  Executing opponent move: {unit.name} (Player {unit.playerId}) from {unit.Position} to {targetPos}");
+        UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unit was destroyed during execution. Aborting.");
+        yield break;
+    }
 
-        // Ensure unit still exists and is valid
-        if (unit == null)
+    var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
+
+    // Check that move is legal - only one step
+    Vector2Int delta = targetPos - unit.Position;
+    if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
+    {
+        UnityEngine.Debug.Log($"Invalid move: Distance must be 1 step, tried to move from {unit.Position} to {targetPos}");
+        yield break;
+    }
+
+    if (targetUnit == null)
+    {
+        UnityEngine.Debug.Log($"Opponent moving {unit.name} to empty tile {targetPos}");
+        unit.MoveTo(targetPos);
+        yield return new WaitForSeconds(0.6f);
+        yield break;
+    }
+
+    // Ensure we're attacking only unit that is exactly at target position
+    if (targetUnit.Position != targetPos)
+    {
+        UnityEngine.Debug.Log($"Cannot attack: Target unit is at {targetUnit.Position} but move is to {targetPos}");
+        yield break;
+    }
+
+    // Ensure units belong to different players
+    if (unit.playerId == targetUnit.playerId)
+    {
+        UnityEngine.Debug.LogWarning($"Cannot attack own unit: both units belong to player {unit.playerId}");
+        yield break;
+    }
+
+    UnityEngine.Debug.Log($"[PvPMoveLogger] Battle: {unit.name}({unit.Kind}) vs {targetUnit.name}({targetUnit.Kind})");
+
+    // Reveal units in battle
+    unit.Reveal();
+    targetUnit.Reveal();
+
+    // Handle trap case
+    if (targetUnit.role == RPSUnit.UnitRole.Trap)
+    {
+        UnityEngine.Debug.Log("Opponent stepped on trap and is destroyed.");
+        BoardManager.Instance.RemoveUnit(unit);
+        Destroy(unit.gameObject);
+        yield break;
+    }
+
+    // Handle flag case
+    if (targetUnit.role == RPSUnit.UnitRole.Flag)
+    {
+        UnityEngine.Debug.Log("Opponent captured the FLAG! YOU LOSE!");
+        BoardManager.Instance.RemoveUnit(targetUnit);
+        Destroy(targetUnit.gameObject);
+        unit.MoveTo(targetPos);
+        PlayerController.gameEnded = true;
+
+        // Set player as loser
+        TurnTimerManager.Instance?.SetPlayerWon(false);
+
+        // Stop all game systems
+        TurnManager.Instance?.StopGame();
+        yield break;
+    }
+
+    // FIXED LOGIC: Handle simple battles vs tie battles correctly
+    if (unit.Kind == targetUnit.Kind)
+    {
+        // Tie battle - must go through battle system for player choices
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Tie battle detected - setting up battle system: {unit.Kind} vs {targetUnit.Kind}");
+        SetupBattleState(targetUnit, unit, targetPos, false);
+        BattleManager.Instance?.ShowPlayerPanel();
+    }
+    else
+    {
+        // Simple battle - resolve immediately using same logic as RPSUnit.TryMove
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Simple battle detected - resolving immediately: {unit.Kind} vs {targetUnit.Kind}");
+        
+        if (unit.Beats(targetUnit))
         {
-            UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unit was destroyed during execution. Aborting.");
-            yield break;
-        }
-
-        var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
-
-        // Check that move is legal - only one step
-        Vector2Int delta = targetPos - unit.Position;
-        if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
-        {
-            UnityEngine.Debug.Log($" Invalid move: Distance must be 1 step, tried to move from {unit.Position} to {targetPos}");
-            yield break;
-        }
-
-        if (targetUnit == null)
-        {
-            UnityEngine.Debug.Log($" Opponent moving {unit.name} to empty tile {targetPos}");
-            unit.MoveTo(targetPos);
-            yield return new WaitForSeconds(0.6f);
-            yield break;
-        }
-
-        // Ensure we're attacking only unit that is exactly at target position
-        if (targetUnit.Position != targetPos)
-        {
-            UnityEngine.Debug.Log($" Cannot attack: Target unit is at {targetUnit.Position} but move is to {targetPos}");
-            yield break;
-        }
-
-        // Ensure units belong to different players
-        if (unit.playerId == targetUnit.playerId)
-        {
-            UnityEngine.Debug.LogWarning($" Cannot attack own unit: both units belong to player {unit.playerId}");
-            yield break;
-        }
-
-        UnityEngine.Debug.Log($"[PvPMoveLogger]  Battle: {unit.name}({unit.Kind}) vs {targetUnit.name}({targetUnit.Kind})");
-
-        // Reveal units in battle
-        unit.Reveal();
-        targetUnit.Reveal();
-
-        // Handle trap case
-        if (targetUnit.role == RPSUnit.UnitRole.Trap)
-        {
-            UnityEngine.Debug.Log(" Opponent stepped on trap and is destroyed.");
-            BoardManager.Instance.RemoveUnit(unit);
-            Destroy(unit.gameObject);
-            yield break;
-        }
-
-        // Handle flag case
-        if (targetUnit.role == RPSUnit.UnitRole.Flag)
-        {
-            UnityEngine.Debug.Log(" Opponent captured the FLAG! YOU LOSE!");
+            UnityEngine.Debug.Log($"✅ Opponent wins: {unit.Kind} beats {targetUnit.Kind}!");
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
-            PlayerController.gameEnded = true;
-
-            // Set player as loser
-            TurnTimerManager.Instance?.SetPlayerWon(false);
-
-            // Stop all game systems
-            TurnManager.Instance?.StopGame();
-            yield break;
         }
-
-        // CRITICAL FIX: For PvP mode, ALL battles should go through the battle system
-        // This ensures both players see the same battle results
-        UnityEngine.Debug.Log($"[PvPMoveLogger] Normal battle detected in PvP mode - forcing through battle system: {unit.Kind} vs {targetUnit.Kind}");
-    
-        SetupBattleState(targetUnit, unit, targetPos, false);
-    
-    // Only show battle panel for tie battles (same unit types)
-    if (unit.Kind == targetUnit.Kind)
-    {
-        BattleManager.Instance?.ShowPlayerPanel();
+        else if (targetUnit.Beats(unit))
+        {
+            UnityEngine.Debug.Log($"✅ You win: {targetUnit.Kind} beats {unit.Kind}!");
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
+            // Target unit stays in place
+        }
+        else
+        {
+            // This shouldn't happen for simple battles, but just in case
+            UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unexpected tie in simple battle: {unit.Kind} vs {targetUnit.Kind}");
+        }
+        
+        yield return new WaitForSeconds(0.5f);
     }
-        yield break;
-    }
+}
 
     /// <summary>
     /// Log player move to server in "nextStep" field
