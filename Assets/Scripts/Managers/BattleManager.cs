@@ -60,35 +60,13 @@ public class BattleManager : MonoBehaviour
         if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
         {
             PvPMoveLogger.Instance.StartBattle(playerUnit, aiUnit, targetPos);
-            
-            // Only show battle panel for tie battles (same unit types)
-            bool isTieBattle = playerUnit.Kind == aiUnit.Kind;
-            if (isTieBattle)
-            {
-                ShowPlayerPanel();
-            }
-            // Normal battles are resolved automatically by PvPMoveLogger
         }
-        else
-        {
-            // Non-PvP mode - always show battle panel
-            ShowPlayerPanel();
-        }
+
+        ShowPlayerPanel();
     }
 
     public void ShowPlayerPanel()
     {
-        // In PvP mode, only show panel for tie battles
-        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && playerUnit != null && aiUnit != null)
-        {
-            bool isTieBattle = playerUnit.Kind == aiUnit.Kind;
-            if (!isTieBattle)
-            {
-                UnityEngine.Debug.Log("[BattleManager] Not showing battle panel - this is a normal battle in PvP mode");
-                return;
-            }
-        }
-
         battlePanel?.SetActive(true);
 
         rockButton.onClick.RemoveAllListeners();

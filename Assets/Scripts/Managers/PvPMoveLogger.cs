@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using System.Collections;
+using System.Linq;
 
 /// <summary>
 /// Manages logging and synchronization of moves in PVP mode
@@ -164,10 +165,22 @@ public class PvPMoveLogger : MonoBehaviour
             return;
         }
 
-        if (!isInBattle) return; // Only process if we're in a battle
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Received battle result. isInBattle: {isInBattle}");
+
+        if (!isInBattle) 
+        {
+            UnityEngine.Debug.LogWarning("[PvPMoveLogger] Ignoring battle result - not in battle state");
+            return; // Only process if we're in a battle
+        }
 
         var battleResultData = args.Snapshot.Value as Dictionary<string, object>;
-        if (battleResultData == null) return;
+        if (battleResultData == null) 
+        {
+            UnityEngine.Debug.LogWarning("[PvPMoveLogger] Battle result data is null");
+            return;
+        }
+
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Processing battle result: {string.Join(", ", battleResultData.Select(kv => $"{kv.Key}={kv.Value}"))}");
 
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
@@ -374,6 +387,7 @@ public class PvPMoveLogger : MonoBehaviour
             // Execute move using ExecuteMoveSequence
             StartCoroutine(ExecuteOpponentMove(movingUnit, toPos));
         }
+        
         catch (Exception ex)
         {
             UnityEngine.Debug.LogError($"[PvPMoveLogger] Error parsing move: {ex.Message}");
@@ -458,26 +472,17 @@ public class PvPMoveLogger : MonoBehaviour
             yield break;
         }
 
-        // Handle battle - set up battle state but don't initiate
-        if (unit.Kind == targetUnit.Kind)
-        {
-            UnityEngine.Debug.Log($"[PvPMoveLogger] Same kind battle detected - unit: {unit.name} (Player {unit.playerId}) vs targetUnit: {targetUnit.name} (Player {targetUnit.playerId})");
-
-            SetupBattleState(targetUnit, unit, targetPos, false);
-
-            // Show battle panel for this player
-            BattleManager.Instance?.ShowPlayerPanel();
-            yield break;
-        }
-
         // CRITICAL FIX: For PvP mode, ALL battles should go through the battle system
         // This ensures both players see the same battle results
         UnityEngine.Debug.Log($"[PvPMoveLogger] Normal battle detected in PvP mode - forcing through battle system: {unit.Kind} vs {targetUnit.Kind}");
-        
+    
         SetupBattleState(targetUnit, unit, targetPos, false);
-        
-        // Show battle panel for this player
+    
+    // Only show battle panel for tie battles (same unit types)
+    if (unit.Kind == targetUnit.Kind)
+    {
         BattleManager.Instance?.ShowPlayerPanel();
+    }
         yield break;
     }
 
@@ -782,6 +787,9 @@ public class PvPMoveLogger : MonoBehaviour
                     // Apply result locally for initiator
                     ApplyBattleResultLocally(iWin, myBattleUnit.Kind, opponentBattleUnit.Kind);
                     
+                    // Wait a moment for opponent to receive the battle result
+                    await Task.Delay(1000);
+                    
                     // Clear battle data from server
                     await roomRef.Child("battleResult").RemoveValueAsync();
                     
@@ -803,48 +811,50 @@ public class PvPMoveLogger : MonoBehaviour
                     return;
                 }
 
-                bool iWin = Beats(myBattleChoice.Value, opponentBattleChoice.Value);
-                bool opponentWins = Beats(opponentBattleChoice.Value, myBattleChoice.Value);
+            bool iWin = Beats(myBattleChoice.Value, opponentBattleChoice.Value);
+            bool opponentWins = Beats(opponentBattleChoice.Value, myBattleChoice.Value);
 
                 UnityEngine.Debug.Log($"[PvPMoveLogger] Resolving tie battle: My choice={myBattleChoice}, Opponent choice={opponentBattleChoice}");
 
-                if (iWin || opponentWins)
-                {
-                    string myPlayerType = isHost ? "host" : "guest";
+            if (iWin || opponentWins)
+            {
+                string myPlayerType = isHost ? "host" : "guest";
                     string opponentPlayerType = isHost ? "guest" : "host";
                     string winner = iWin ? myPlayerType : opponentPlayerType;
 
                     // Send more explicit battle result with each player's actual choice
-                    var battleResult = new Dictionary<string, object>
-                    {
-                        { "winner", winner },
+                var battleResult = new Dictionary<string, object>
+                {
+                    { "winner", winner },
                         { "hostChoice", isHost ? myBattleChoice.Value.ToString() : opponentBattleChoice.Value.ToString() },
                         { "guestChoice", isHost ? opponentBattleChoice.Value.ToString() : myBattleChoice.Value.ToString() }
-                    };
+                };
 
-                    await roomRef.Child("battleResult").SetValueAsync(battleResult);
+                await roomRef.Child("battleResult").SetValueAsync(battleResult);
 
-                    // Apply result locally for initiator
-                    ApplyBattleResultLocally(iWin, myBattleChoice.Value, opponentBattleChoice.Value);
-                    
-                    // Clear battle data from server
-                    await roomRef.Child("battleChoice").RemoveValueAsync();
-                    await roomRef.Child("battleResult").RemoveValueAsync();
-                    
-                    // End battle - THIS IS CRITICAL
-                    EndBattle();
-                }
-                else
-                {
-                    // Tie - restart battle
-                    UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
-                    myBattleChoice = null;
-                    opponentBattleChoice = null;
-                    
-                    // Clear battle choices on server
-                    await roomRef.Child("battleChoice").RemoveValueAsync();
-                    
-                    BattleManager.Instance?.ShowPlayerPanel();
+                // Apply result locally for initiator
+                ApplyBattleResultLocally(iWin, myBattleChoice.Value, opponentBattleChoice.Value);
+                
+                // Wait a moment for opponent to receive the battle result
+                await Task.Delay(1000);
+                
+                // Clear battle data from server
+                await roomRef.Child("battleResult").RemoveValueAsync();
+                
+                // End battle - THIS IS CRITICAL
+                EndBattle();
+            }
+            else
+            {
+                // Tie - restart battle
+                UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
+                myBattleChoice = null;
+                opponentBattleChoice = null;
+                
+                // Clear battle choices on server
+                await roomRef.Child("battleChoice").RemoveValueAsync();
+                
+                BattleManager.Instance?.ShowPlayerPanel();
                 }
             }
         }
