@@ -361,11 +361,21 @@ public class PlayerController : MonoBehaviour
         // Update hierarchy and grid data
         unit.transform.SetParent(targetTile, false);
         rt.anchoredPosition = Vector2.zero;
+
+        Vector2Int oldPos = unit.Position;
         unit.Position = targetGridPos;
-        BoardManager.Instance.PlaceUnit(unit, targetGridPos);//add
 
-
-        UnityEngine.Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+        // In PvP mode, use MoveUnit to properly clear old position for board synchronization
+        if (GameModeManager.Instance != null && GameModeManager.Instance.SelectedMode == GameMode.PvP)
+        {
+            BoardManager.Instance.MoveUnit(unit, targetGridPos);
+            UnityEngine.Debug.Log($"✅ [PlayerController] PvP - Moved {unit.name} from {oldPos} to {targetGridPos}");
+        }
+        else
+        {
+            BoardManager.Instance.PlaceUnit(unit, targetGridPos);
+            UnityEngine.Debug.Log($"✅ Smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
+        }
     }
 
 
