@@ -46,11 +46,13 @@ public class TurnTimerManager : MonoBehaviour
         currentTime = turnDuration;
         timerRunning = true;
         UpdateDisplay();
+        UnityEngine.Debug.Log("[TurnTimerManager] Timer started - new turn begins");
     }
 
     public void StopTimer()
     {
         timerRunning = false;
+        UnityEngine.Debug.Log("[TurnTimerManager] Timer stopped");
     }
 
     public void SetPlayerWon(bool won)
@@ -154,7 +156,10 @@ public class TurnTimerManager : MonoBehaviour
             return;
 
         if (BattleManager.Instance != null && BattleManager.Instance.IsBattleActive())
+        {
+            // Timer is paused during battles - this is expected behavior
             return;
+        }
 
         currentTime -= Time.deltaTime;
         UpdateDisplay();

@@ -52,6 +52,10 @@ public class BattleManager : MonoBehaviour
         targetPos = target;
         isBattleActive = true;
 
+        // CRITICAL: Stop the timer during battles to prevent race conditions
+        TurnTimerManager.Instance?.StopTimer();
+        UnityEngine.Debug.Log("[BattleManager] Timer stopped for battle");
+
         // If in PvP mode, use PvPMoveLogger
         if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
         {
