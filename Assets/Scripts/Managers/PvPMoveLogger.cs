@@ -425,7 +425,7 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unit was destroyed during execution. Aborting.");
         yield break;
     }
-
+    var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
     if (targetUnit != null)
         {
             UnityEngine.Debug.Log($"[PvPMoveLogger] Target Unit Found: {targetUnit.name} | Player: {targetUnit.playerId} | Kind: {targetUnit.Kind} | Role: {targetUnit.role}");
@@ -435,7 +435,7 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         {
             UnityEngine.Debug.Log($"[PvPMoveLogger] No target unit at {targetPos} - this should be a simple move to empty space");
         }
-    var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
+    
 
     // Check that move is legal - only one step
     Vector2Int delta = targetPos - unit.Position;
