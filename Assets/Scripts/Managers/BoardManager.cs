@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Diagnostics;
+using UnityEngine;
 
 public class BoardManager : MonoBehaviour
 {
@@ -78,12 +79,20 @@ public class BoardManager : MonoBehaviour
     public Unit GetUnitAt(Vector2Int pos)
     {
         if (!IsInsideBoard(pos)) return null;
-        return unitGrid[pos.x, pos.y];
+        Unit unit = unitGrid[pos.x, pos.y];
+        UnityEngine.Debug.Log($"[BoardManager] GetUnitAt({pos}): {(unit != null ? $"{unit.name} (Player {unit.playerId}) at {unit.Position}" : "null")}");
+        return unit;
     }
 
     public void PlaceUnit(Unit unit, Vector2Int pos)
     {
         if (!IsInsideBoard(pos)) return;
+
+        Unit existingUnit = unitGrid[pos.x, pos.y];
+        if (existingUnit != null && existingUnit != unit)
+        {
+            UnityEngine.Debug.LogWarning($"[BoardManager] PlaceUnit WARNING: Overwriting unit {existingUnit.name} at {pos} with {unit.name}");
+        }
 
         unitGrid[pos.x, pos.y] = unit;
         unit.SetPosition(pos);
@@ -92,17 +101,30 @@ public class BoardManager : MonoBehaviour
         unit.transform.SetParent(tile, false);
         unit.transform.localPosition = Vector3.zero;
 
-        Debug.Log($"📌 [BoardManager] Placed unit {unit.name} at [col {pos.x}, row {pos.y}]");
+        UnityEngine.Debug.Log($"📌 [BoardManager] PlaceUnit: {unit.name} at {pos} (old position NOT cleared!)");
     }
 
     public void MoveUnit(Unit unit, Vector2Int newPos)
     {
         Vector2Int oldPos = unit.Position;
+        UnityEngine.Debug.Log($"[BoardManager] MoveUnit: {unit.name} from {oldPos} to {newPos}");
+
         if (IsInsideBoard(oldPos))
+        {
             unitGrid[oldPos.x, oldPos.y] = null;
+            UnityEngine.Debug.Log($"[BoardManager] Cleared old position {oldPos}");
+        }
 
         if (IsInsideBoard(newPos))
+        {
+            Unit existingUnit = unitGrid[newPos.x, newPos.y];
+            if (existingUnit != null && existingUnit != unit)
+            {
+                UnityEngine.Debug.LogWarning($"[BoardManager] WARNING: Overwriting unit {existingUnit.name} at {newPos} with {unit.name}");
+            }
             unitGrid[newPos.x, newPos.y] = unit;
+            UnityEngine.Debug.Log($"[BoardManager] Placed {unit.name} at new position {newPos}");
+        }
     }
 
     public void RemoveUnit(Unit unit)
@@ -115,11 +137,11 @@ public class BoardManager : MonoBehaviour
             if (unitGrid[pos.x, pos.y] == unit)
             {
                 unitGrid[pos.x, pos.y] = null;
-                Debug.Log($"🗑️ Removed unit from [col {pos.x}, row {pos.y}]");
+                UnityEngine.Debug.Log($"🗑️ Removed unit from [col {pos.x}, row {pos.y}]");
             }
             else if (unitGrid[pos.x, pos.y] != null)
             {
-                Debug.Log($"⚠️ Warning: Unit at [col {pos.x}, row {pos.y}] doesn't match the unit being removed");
+                UnityEngine.Debug.Log($"⚠️ Warning: Unit at [col {pos.x}, row {pos.y}] doesn't match the unit being removed");
                 unitGrid[pos.x, pos.y] = null;
             }
         }
@@ -164,6 +186,6 @@ public class BoardManager : MonoBehaviour
             unitB.transform.localPosition = Vector3.zero;
         }
 
-        Debug.Log($"🔁 Swapped units {unitA.name} and {unitB.name} between {posA} and {posB}");
+        UnityEngine.Debug.Log($"🔁 Swapped units {unitA.name} and {unitB.name} between {posA} and {posB}");
     }
 }

@@ -19,7 +19,7 @@ public class PvPMoveLogger : MonoBehaviour
     private DatabaseReference roomRef;
     private bool isListening = false;
     private string lastProcessedMove = "";
-    
+
     // Battle state tracking
     private bool isInBattle = false;
     private RPSUnit.RPSKind? myBattleChoice;
@@ -318,13 +318,16 @@ public class PvPMoveLogger : MonoBehaviour
     /// </summary>
     private void ParseAndExecuteMove(string moveDescription)
     {
+        UnityEngine.Debug.Log($"[PvPMoveLogger] === PARSING OPPONENT MOVE ===");
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Raw move description: {moveDescription}");
+
         try
         {
             // Ensure this is not our own move
             string myPlayerType = isHost ? "host" : "guest";
             if (moveDescription.Contains(myPlayerType))
             {
-                UnityEngine.Debug.Log($"[PvPMoveLogger]  Ignoring our own move: {moveDescription}");
+                UnityEngine.Debug.Log($"[PvPMoveLogger] Ignoring our own move: {moveDescription}");
                 return;
             }
 
@@ -350,10 +353,20 @@ public class PvPMoveLogger : MonoBehaviour
             Vector2Int fromPos = new Vector2Int(int.Parse(fromParts[0]), int.Parse(fromParts[1]));
             Vector2Int toPos = new Vector2Int(int.Parse(toParts[0]), int.Parse(toParts[1]));
 
-            UnityEngine.Debug.Log($"[PvPMoveLogger]  Parsed opponent move: {fromPos} -> {toPos}");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Parsed move: {fromPos} -> {toPos}");
 
             // Find unit at original position
             RPSUnit movingUnit = BoardManager.Instance.GetUnitAt(fromPos) as RPSUnit;
+
+            if (movingUnit != null)
+            {
+                UnityEngine.Debug.Log($"[PvPMoveLogger] Found moving unit: {movingUnit.name} ({movingUnit.Kind}, Player {movingUnit.playerId}) at {movingUnit.Position}");
+            }
+            else
+            {
+                UnityEngine.Debug.LogError($"[PvPMoveLogger] No unit found at source position {fromPos}!");
+                return;
+            }
 
             if (movingUnit == null)
             {
@@ -394,13 +407,16 @@ public class PvPMoveLogger : MonoBehaviour
         }
     }
 
-// In PvPMoveLogger.cs, replace the ExecuteOpponentMove method with this fixed version:
+
 
 /// <summary>
 /// Execute opponent move using the same logic as ExecuteMoveSequence
 /// </summary>
 private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
 {
+    UnityEngine.Debug.Log($"[PvPMoveLogger] === EXECUTING OPPONENT MOVE ===");
+    UnityEngine.Debug.Log($"[PvPMoveLogger] Moving Unit: {unit.name} | Player: {unit.playerId} | Kind: {unit.Kind} | Role: {unit.role}");
+    UnityEngine.Debug.Log($"[PvPMoveLogger] From Position: {unit.Position} | To Position: {targetPos}");
     UnityEngine.Debug.Log($"[PvPMoveLogger] Executing opponent move: {unit.name} (Player {unit.playerId}) from {unit.Position} to {targetPos}");
 
     // Ensure unit still exists and is valid
@@ -410,6 +426,15 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         yield break;
     }
 
+    if (targetUnit != null)
+        {
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Target Unit Found: {targetUnit.name} | Player: {targetUnit.playerId} | Kind: {targetUnit.Kind} | Role: {targetUnit.role}");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Target Unit Position: {targetUnit.Position} (should match target position {targetPos})");
+        }
+        else
+        {
+            UnityEngine.Debug.Log($"[PvPMoveLogger] No target unit at {targetPos} - this should be a simple move to empty space");
+        }
     var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
 
     // Check that move is legal - only one step
@@ -425,8 +450,25 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         UnityEngine.Debug.Log($"Opponent moving {unit.name} to empty tile {targetPos}");
         unit.MoveTo(targetPos);
         yield return new WaitForSeconds(0.6f);
+        // Synchronize turn after guest (player 2) completed their move
+            if (unit.playerId == 2 && TurnManager.Instance != null)
+            {
+                // Since guest just moved, now it should be host's turn (player 1)
+                TurnManager.Instance.StartPlayerTurn();
+                UnityEngine.Debug.Log("[PvPMoveLogger] Guest move completed - starting host's turn");
+            }
         yield break;
     }
+    // Ensure we're attacking only unit that is exactly at target position
+        if (targetUnit.Position != targetPos)
+        {
+            UnityEngine.Debug.Log($"[PvPMoveLogger] ERROR: Position mismatch!");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Target unit {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId}) is at {targetUnit.Position}");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] But move is targeting position {targetPos}");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] This indicates a synchronization issue between boards!");
+            yield break;
+        }
+
 
     // Ensure we're attacking only unit that is exactly at target position
     if (targetUnit.Position != targetPos)
@@ -435,6 +477,10 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         yield break;
     }
 
+
+UnityEngine.Debug.Log($"[PvPMoveLogger] BATTLE INITIATED:");
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Attacker: {unit.name} ({unit.Kind}, Player {unit.playerId}) at {unit.Position}");
+        UnityEngine.Debug.Log($"[PvPMoveLogger] Defender: {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId}) at {targetUnit.Position}");
     // Ensure units belong to different players
     if (unit.playerId == targetUnit.playerId)
     {
@@ -442,19 +488,29 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         yield break;
     }
 
+
     UnityEngine.Debug.Log($"[PvPMoveLogger] Battle: {unit.name}({unit.Kind}) vs {targetUnit.name}({targetUnit.Kind})");
 
     // Reveal units in battle
     unit.Reveal();
     targetUnit.Reveal();
 
+
     // Handle trap case
     if (targetUnit.role == RPSUnit.UnitRole.Trap)
     {
-        UnityEngine.Debug.Log("Opponent stepped on trap and is destroyed.");
-        BoardManager.Instance.RemoveUnit(unit);
-        Destroy(unit.gameObject);
-        yield break;
+        UnityEngine.Debug.Log(" Opponent stepped on trap and is destroyed.");
+            BoardManager.Instance.RemoveUnit(unit);
+            Destroy(unit.gameObject);
+
+            // Synchronize turn after guest (player 2) completed their move
+            if (unit.playerId == 2 && TurnManager.Instance != null)
+            {
+                // Since guest just moved, now it should be host's turn (player 1)
+                TurnManager.Instance.StartPlayerTurn();
+                UnityEngine.Debug.Log("[PvPMoveLogger] Guest stepped on trap - starting host's turn");
+            }
+            yield break;
     }
 
     // Handle flag case
@@ -468,6 +524,7 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
 
         // Set player as loser
         TurnTimerManager.Instance?.SetPlayerWon(false);
+
 
         // Stop all game systems
         TurnManager.Instance?.StopGame();
@@ -489,17 +546,44 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         
         if (unit.Beats(targetUnit))
         {
-            UnityEngine.Debug.Log($"✅ Opponent wins: {unit.Kind} beats {targetUnit.Kind}!");
+
+            UnityEngine.Debug.Log($"[PvPMoveLogger] BATTLE RESULT: Opponent wins! {unit.Kind} beats {targetUnit.Kind}");
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Removing defender: {targetUnit.name} (Player {targetUnit.playerId})");
+
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
+            Vector2Int oldPos = unit.Position;
             unit.MoveTo(targetPos);
+
+            UnityEngine.Debug.Log($"[PvPMoveLogger] Winner {unit.name} moved from {oldPos} to {unit.Position}");
+            yield return new WaitForSeconds(0.6f);
+
+            // Synchronize turn after guest (player 2) completed their move
+            if (unit.playerId == 2 && TurnManager.Instance != null)
+            {
+                // Since guest just moved, now it should be host's turn (player 1)
+                TurnManager.Instance.StartPlayerTurn();
+                UnityEngine.Debug.Log("[PvPMoveLogger] Guest won battle - starting host's turn");
+            }
+            yield break;
+
         }
         else if (targetUnit.Beats(unit))
         {
             UnityEngine.Debug.Log($"✅ You win: {targetUnit.Kind} beats {unit.Kind}!");
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
-            // Target unit stays in place
+
+
+            // Synchronize turn after guest (player 2) completed their move
+            if (unit.playerId == 2 && TurnManager.Instance != null)
+            {
+                // Since guest just moved, now it should be host's turn (player 1)
+                TurnManager.Instance.StartPlayerTurn();
+                UnityEngine.Debug.Log("[PvPMoveLogger] Guest lost battle - starting host's turn");
+            }
+            yield break;
+
         }
         else
         {
@@ -589,8 +673,9 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         {
             string playerType = isHost ? "host" : "guest";
             string choiceStr = choice.ToString();
-            
+
             UnityEngine.Debug.Log($"[PvPMoveLogger] Sending {playerType} battle choice for tie battle: {choiceStr}");
+
 
             // Update battle choice in server
             var updates = new Dictionary<string, object>
@@ -640,7 +725,7 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
         {
             bool shouldBreak = false;
             var task = roomRef.Child("battleChoice").GetValueAsync();
-            
+
             yield return new WaitUntil(() => task.IsCompleted);
 
             if (task.Exception != null)
@@ -859,13 +944,14 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
 
                 // Apply result locally for initiator
                 ApplyBattleResultLocally(iWin, myBattleChoice.Value, opponentBattleChoice.Value);
+
                 
                 // Wait a moment for opponent to receive the battle result
                 await Task.Delay(1000);
-                
+
                 // Clear battle data from server
                 await roomRef.Child("battleResult").RemoveValueAsync();
-                
+
                 // End battle - THIS IS CRITICAL
                 EndBattle();
             }
@@ -875,10 +961,10 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
                 UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
                 myBattleChoice = null;
                 opponentBattleChoice = null;
-                
+
                 // Clear battle choices on server
                 await roomRef.Child("battleChoice").RemoveValueAsync();
-                
+
                 BattleManager.Instance?.ShowPlayerPanel();
                 }
             }
@@ -925,7 +1011,7 @@ private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
     private void EndBattle()
     {
         UnityEngine.Debug.Log("[PvPMoveLogger] EndBattle() called - cleaning up battle state");
-        
+
         // Clean up battle state
         isInBattle = false;
         isBattleInitiator = false;
