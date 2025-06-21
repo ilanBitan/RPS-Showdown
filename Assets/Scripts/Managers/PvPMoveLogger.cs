@@ -718,48 +718,46 @@ UnityEngine.Debug.Log($"[PvPMoveLogger] BATTLE INITIATED:");
         }
 
         // Wait for opponent choice
-        float timeout = 30f;
-        float elapsed = 0f;
+// Wait for opponent choice
+float timeout = 30f;
+float elapsed = 0f;
 
-        while (!opponentBattleChoice.HasValue && elapsed < timeout)
+while (!opponentBattleChoice.HasValue && elapsed < timeout)
+{
+    var task = roomRef.Child("battleChoice").GetValueAsync();
+
+    yield return new WaitUntil(() => task.IsCompleted);
+
+    if (task.Exception != null)
+    {
+        UnityEngine.Debug.LogError($"[PvPMoveLogger] Error checking opponent choice: {task.Exception}");
+    }
+    else
+    {
+        try
         {
-            bool shouldBreak = false;
-            var task = roomRef.Child("battleChoice").GetValueAsync();
-
-            yield return new WaitUntil(() => task.IsCompleted);
-
-            if (task.Exception != null)
+            var data = task.Result.Value as Dictionary<string, object>;
+            if (data != null)
             {
-                UnityEngine.Debug.LogError($"[PvPMoveLogger] Error checking opponent choice: {task.Exception}");
-                shouldBreak = true;
-            }
-            else
-            {
-                try
+                string opponentType = isHost ? "guest" : "host";
+                if (data.ContainsKey(opponentType))
                 {
-                    var data = task.Result.Value as Dictionary<string, object>;
-                    if (data != null)
-                    {
-                        string opponentType = isHost ? "guest" : "host";
-                        if (data.ContainsKey(opponentType))
-                        {
-                            string choiceStr = data[opponentType].ToString();
-                            opponentBattleChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), choiceStr);
-                            shouldBreak = true;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    UnityEngine.Debug.LogError($"[PvPMoveLogger] Error processing opponent choice: {ex.Message}");
+                    string choiceStr = data[opponentType].ToString();
+                    opponentBattleChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), choiceStr);
+                    UnityEngine.Debug.Log($"[PvPMoveLogger] Found opponent choice: {choiceStr}");
+                    break;
                 }
             }
-
-            if (shouldBreak) break;
-
-            yield return new WaitForSeconds(0.5f);
-            elapsed += 0.5f;
         }
+        catch (Exception ex)
+        {
+            UnityEngine.Debug.LogError($"[PvPMoveLogger] Error processing opponent choice: {ex.Message}");
+        }
+    }
+
+    yield return new WaitForSeconds(0.5f);
+    elapsed += 0.5f;
+}
 
         if (opponentBattleChoice.HasValue)
         {
@@ -774,6 +772,10 @@ UnityEngine.Debug.Log($"[PvPMoveLogger] BATTLE INITIATED:");
 
     private void SetupBattleState(RPSUnit myUnit, RPSUnit opponentUnit, Vector2Int targetPos, bool initiator)
     {
+            if (roomRef != null)
+    {
+        _ = roomRef.Child("battleChoice").RemoveValueAsync();
+    }
         isInBattle = true;
         isBattleInitiator = initiator;
         myBattleUnit = myUnit;

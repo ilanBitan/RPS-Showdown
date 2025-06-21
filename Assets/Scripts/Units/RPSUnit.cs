@@ -321,6 +321,10 @@ public class RPSUnit : Unit
             else
             {
                 UnityEngine.Debug.Log($"❌ {enemy.Kind} beats {this.Kind}!");
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
