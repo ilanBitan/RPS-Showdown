@@ -170,7 +170,7 @@ public class FirebaseDatabaseService
             _ => throw new System.ArgumentException("Invalid RPS choice")
         };
 
-        // ÷åãí ð÷áì àú äòøê äðåëçé
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         firebaseManager.DatabaseReference.Child("users").Child(firebaseManager.CurrentUser.UserId)
             .Child(fieldName).GetValueAsync().ContinueWithOnMainThread(task => {
                 if (task.IsFaulted)
@@ -185,7 +185,7 @@ public class FirebaseDatabaseService
                     currentValue = int.Parse(task.Result.Value.ToString());
                 }
 
-                // ðòãëï àú äòøê äçãù
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
                 firebaseManager.DatabaseReference.Child("users").Child(firebaseManager.CurrentUser.UserId)
                     .Child(fieldName).SetValueAsync(currentValue + 1).ContinueWithOnMainThread(updateTask => {
                         if (updateTask.IsFaulted)
@@ -285,5 +285,43 @@ public class FirebaseDatabaseService
                     UnityEngine.Debug.Log("Existing user data updated successfully");
                 }
             });
+    }
+
+    public void IncrementUserLossesAsync()
+    {
+        if (!firebaseManager.IsInitialized || firebaseManager.CurrentUser == null)
+        {
+            UnityEngine.Debug.LogError("Firebase is not initialized or no user is signed in");
+            return;
+        }
+
+        DatabaseReference lossesRef = firebaseManager.DatabaseReference.Child("users").Child(firebaseManager.CurrentUser.UserId).Child("losses");
+
+        lossesRef.GetValueAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsFaulted)
+            {
+                UnityEngine.Debug.LogError($"Error getting current losses: {task.Exception}");
+                return;
+            }
+
+            long currentLosses = 0;
+            if (task.Result.Exists)
+            {
+                currentLosses = (long)task.Result.Value;
+            }
+
+            lossesRef.SetValueAsync(currentLosses + 1).ContinueWithOnMainThread(updateTask =>
+            {
+                if (updateTask.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Error updating losses: {updateTask.Exception}");
+                }
+                else
+                {
+                    UnityEngine.Debug.Log("User losses incremented successfully.");
+                }
+            });
+        });
     }
 }

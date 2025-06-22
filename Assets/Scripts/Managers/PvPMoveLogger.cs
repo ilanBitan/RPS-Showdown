@@ -5,12 +5,11 @@ using System;
 using System.Threading.Tasks;
 
 /// <summary>
-/// מנהל רישום צעדים במצב PVP
-/// רושם כל צעד של שחקן (מארח או אורח) לשרת Firebase
+/// Handles logging of player moves in PvP matches to Firebase
 /// </summary>
 public class PvPMoveLogger : MonoBehaviour
 {
-    public static PvPMoveLogger Instance;
+    public static PvPMoveLogger Instance { get; private set; }
 
     private string currentRoomId;
     private bool isHost;
@@ -18,17 +17,17 @@ public class PvPMoveLogger : MonoBehaviour
 
     private void Awake()
     {
+        // Ensure only one instance exists
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-
         Instance = this;
     }
 
     /// <summary>
-    /// אתחול הלוגר עם פרטי החדר
+    /// Initialize the logger with room information
     /// </summary>
     public void Initialize(string roomId, bool isHostPlayer)
     {
@@ -37,110 +36,96 @@ public class PvPMoveLogger : MonoBehaviour
 
         if (!string.IsNullOrEmpty(currentRoomId))
         {
-            roomRef = FirebaseManager.Instance.DatabaseReference.Child("rooms").Child(currentRoomId);
-            UnityEngine.Debug.Log($"[PvPMoveLogger] Initialized for room {roomId}, isHost: {isHost}");
+            roomRef = FirebaseManager.Instance.DatabaseReference
+                .Child("rooms")
+                .Child(currentRoomId);
+
+            Debug.Log($"[PvPMoveLogger] Initialized for room {roomId}, Player is {(isHost ? "Host" : "Guest")}");
         }
     }
 
     /// <summary>
-    /// רושם צעד של שחקן לשרת בשדה "nextStep"
+    /// Log a player's move to Firebase
     /// </summary>
-    /// <param name="fromPosition">המיקום שממנו זז החייל</param>
-    /// <param name="toPosition">המיקום שאליו זז החייל</param>
     public async void LogPlayerMove(Vector2Int fromPosition, Vector2Int toPosition)
     {
         if (string.IsNullOrEmpty(currentRoomId) || roomRef == null)
         {
-            UnityEngine.Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
+            Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
             return;
         }
 
         try
         {
-            // קביעת מי עשה את הצעד
-            string playerType = isHost ? "מארח" : "אורח";
+            string playerType = isHost ? "Host" : "Guest";
+            string moveDescription = $"{playerType} moved from ({fromPosition.x},{fromPosition.y}) to ({toPosition.x},{toPosition.y})";
 
-            // יצירת מחרוזת המתארת את הצעד
-            string moveDescription = $"{playerType} זז מ({fromPosition.x},{fromPosition.y}) ל({toPosition.x},{toPosition.y})";
-
-            // עדכון השדה nextStep בשרת
+            // Update next move in Firebase
             var updates = new Dictionary<string, object>
             {
-                { "nextStep", moveDescription }
+                { "nextStep", moveDescription },
+                { "lastMoveTime", ServerValue.Timestamp }
             };
 
             await roomRef.UpdateChildrenAsync(updates);
-
-            // עדכון מצב הלוח בשרת
             await UpdateBoardState(fromPosition, toPosition);
 
-            UnityEngine.Debug.Log($"[PvPMoveLogger]  רישום צעד הושלם: {moveDescription}");
+            Debug.Log($"[PvPMoveLogger] Logged move: {moveDescription}");
         }
         catch (Exception ex)
         {
-            UnityEngine.Debug.LogError($"[PvPMoveLogger]  שגיאה ברישום הצעד: {ex.Message}");
+            Debug.LogError($"[PvPMoveLogger] Failed to log move: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// מעדכן את מצב הלוח בשרת לאחר צעד
+    /// Update the game board state in Firebase after a move
     /// </summary>
-    /// <param name="fromPosition">המיקום שממנו זז החייל</param>
-    /// <param name="toPosition">המיקום שאליו זז החייל</param>
     private async Task UpdateBoardState(Vector2Int fromPosition, Vector2Int toPosition)
     {
         try
         {
-            // מציאת החייל שזז
             RPSUnit movingUnit = FindUnitAtPosition(toPosition);
             if (movingUnit == null)
             {
-                UnityEngine.Debug.LogWarning("[PvPMoveLogger] Could not find moving unit for board state update");
+                Debug.LogWarning("[PvPMoveLogger] Could not find unit at destination position");
                 return;
             }
 
-            // עדכון מצב הלוח
-            var boardUpdates = new Dictionary<string, object>();
-
-            // עדכון המשבצת המקורית להיות ריקה
-            string fromKey = $"boardState/{fromPosition.x}_{fromPosition.y}";
-            var emptyState = new Dictionary<string, object>
+            var boardUpdates = new Dictionary<string, object>
             {
-                { "player", "none" },
-                { "role", "None" },
-                { "kind", "None" }
-            };
-            boardUpdates[fromKey] = emptyState;
+                // Clear the original position
+                [$"boardState/{fromPosition.x}_{fromPosition.y}"] = new Dictionary<string, object>
+                {
+                    { "player", "none" },
+                    { "role", "None" },
+                    { "kind", "None" }
+                },
 
-            // עדכון המשבצת החדשה עם פרטי החייל
-            string toKey = $"boardState/{toPosition.x}_{toPosition.y}";
-            string playerName = isHost ? "host" : "guest";
-            var unitState = new Dictionary<string, object>
-            {
-                { "player", playerName },
-                { "role", movingUnit.role.ToString() },
-                { "kind", movingUnit.Kind.ToString() }
+                // Set the new position
+                [$"boardState/{toPosition.x}_{toPosition.y}"] = new Dictionary<string, object>
+                {
+                    { "player", isHost ? "host" : "guest" },
+                    { "role", movingUnit.role.ToString() },
+                    { "kind", movingUnit.Kind.ToString() }
+                }
             };
-            boardUpdates[toKey] = unitState;
 
-            // שליחת העדכון לשרת
             await roomRef.UpdateChildrenAsync(boardUpdates);
-
-            UnityEngine.Debug.Log($"[PvPMoveLogger] עדכון מצב לוח הושלם: {fromPosition} -> {toPosition}");
+            Debug.Log($"[PvPMoveLogger] Updated board state: {fromPosition} -> {toPosition}");
         }
         catch (Exception ex)
         {
-            UnityEngine.Debug.LogError($"[PvPMoveLogger] שגיאה בעדכון מצב הלוח: {ex.Message}");
+            Debug.LogError($"[PvPMoveLogger] Failed to update board state: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// מוצא יחידה במיקום מסוים
+    /// Find a unit at the specified position
     /// </summary>
     private RPSUnit FindUnitAtPosition(Vector2Int position)
     {
-        RPSUnit[] allUnits = FindObjectsOfType<RPSUnit>();
-        foreach (var unit in allUnits)
+        foreach (var unit in FindObjectsOfType<RPSUnit>())
         {
             if (unit.Position.x == position.x && unit.Position.y == position.y)
             {
