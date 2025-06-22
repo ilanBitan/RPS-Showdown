@@ -188,4 +188,15 @@ public class BoardManager : MonoBehaviour
 
         UnityEngine.Debug.Log($"🔁 Swapped units {unitA.name} and {unitB.name} between {posA} and {posB}");
     }
+
+    /// <summary>
+    /// Clear unit reference at specific position - used for PvP synchronization fixes
+    /// </summary>
+    public void ClearUnitAt(Vector2Int pos)
+    {
+        if (!IsInsideBoard(pos)) return;
+
+        unitGrid[pos.x, pos.y] = null;
+        UnityEngine.Debug.Log($"[BoardManager] Manually cleared unit reference at {pos}");
+    }
 }
