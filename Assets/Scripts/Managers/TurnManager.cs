@@ -19,17 +19,49 @@ public class TurnManager : MonoBehaviour
 
         if (isFirstGame)
         {
-            // במשחק ראשון - הגרלה
+            // First game - random selection
             isPlayer1Turn = UnityEngine.Random.Range(0, 2) == 0;
             lastGameStartedWithPlayer1 = isPlayer1Turn;
             isFirstGame = false;
         }
         else
         {
-            // במשחקים הבאים - הפוך ממי שהתחיל קודם
+            // Subsequent games - reverse from who started last
             isPlayer1Turn = !lastGameStartedWithPlayer1;
             lastGameStartedWithPlayer1 = isPlayer1Turn;
         }
+
+        // Ensure PvPMoveLogger is active for PvP mode
+        if (GameModeManager.Instance != null && GameModeManager.Instance.SelectedMode == GameMode.PvP)
+        {
+            StartCoroutine(EnsurePvPMoveLoggerActive());
+        }
+    }
+
+    /// <summary>
+    /// Ensure PvPMoveLogger is active in PvP mode
+    /// </summary>
+    private IEnumerator EnsurePvPMoveLoggerActive()
+    {
+        // Wait until game is ready
+        yield return new WaitForSeconds(1f);
+
+        if (PvPMoveLogger.Instance == null)
+        {
+            // Create PvPMoveLogger if it doesn't exist
+            GameObject loggerObj = new GameObject("PvPMoveLogger");
+            PvPMoveLogger logger = loggerObj.AddComponent<PvPMoveLogger>();
+
+            // Get room details from UnitPlacer or GameSetupManager
+            UnitPlacer unitPlacer = FindObjectOfType<UnitPlacer>();
+            if (unitPlacer != null)
+            {
+                // Cannot get details directly, will need to wait for them to be activated
+                UnityEngine.Debug.Log("[TurnManager] PvPMoveLogger created, waiting for initialization...");
+            }
+        }
+
+        UnityEngine.Debug.Log("[TurnManager] PvP mode detected - move synchronization active");
     }
 
     public void StartPlayerTurn()
@@ -56,6 +88,17 @@ public class TurnManager : MonoBehaviour
     public void EndTurn()
     {
         if (!gameActive) return;
+
+        // In PvP mode, just switch turns without AI involvement
+        if (GameModeManager.Instance != null && GameModeManager.Instance.SelectedMode == GameMode.PvP)
+        {
+            isPlayer1Turn = !isPlayer1Turn;
+            TurnTimerManager.Instance?.StartTurn();
+            UnityEngine.Debug.Log($"[TurnManager] PvP turn ended. Next turn: Player {(isPlayer1Turn ? 1 : 2)}");
+            return;
+        }
+
+        // In PvE mode - original logic
         isPlayer1Turn = !isPlayer1Turn;
         TurnTimerManager.Instance?.StartTurn();
 
@@ -84,6 +127,12 @@ public class TurnManager : MonoBehaviour
     {
         gameActive = false;
         TurnTimerManager.Instance?.StopTimer();
+
+        // Stop listening to moves in PvP mode
+        if (PvPMoveLogger.Instance != null)
+        {
+            PvPMoveLogger.Instance.StopListening();
+        }
     }
 
     public void StartDuel(RPSUnit unit1, RPSUnit unit2)

@@ -1,0 +1,42 @@
+using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class UnityMainThreadDispatcher : MonoBehaviour
+{
+    private static UnityMainThreadDispatcher _instance;
+    private static readonly Queue<Action> _actionQueue = new Queue<Action>();
+    private static bool _initialized;
+
+    public static UnityMainThreadDispatcher Instance()
+    {
+        if (!_initialized)
+        {
+            _initialized = true;
+            var go = new GameObject("UnityMainThreadDispatcher");
+            _instance = go.AddComponent<UnityMainThreadDispatcher>();
+            DontDestroyOnLoad(go);
+        }
+        return _instance;
+    }
+
+    public void Enqueue(Action action)
+    {
+        lock (_actionQueue)
+        {
+            _actionQueue.Enqueue(action);
+        }
+    }
+
+    private void Update()
+    {
+        lock (_actionQueue)
+        {
+            while (_actionQueue.Count > 0)
+            {
+                _actionQueue.Dequeue()?.Invoke();
+            }
+        }
+    }
+}
