@@ -392,7 +392,7 @@ public class RPSUnit : Unit
 
     public void MoveTo(Vector2Int newPos)
     {
-        Vector2Int oldPos = Position;
+
         
         // Handle board management logic
         Vector2Int oldPos = Position;
