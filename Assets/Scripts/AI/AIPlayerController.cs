@@ -126,6 +126,14 @@ public class AIPlayerController : MonoBehaviour
         if (targetUnit.role == RPSUnit.UnitRole.Trap)
         {
             UnityEngine.Debug.Log("💥 AI stepped on trap and is destroyed.");
+            
+            // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(unit);
+            }
+            
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -136,6 +144,14 @@ public class AIPlayerController : MonoBehaviour
         if (targetUnit.role == RPSUnit.UnitRole.Flag)
         {
             UnityEngine.Debug.Log("🎯 AI captured the FLAG! YOU LOSE!");
+            
+            // עדכון ה-AI הקשה על דגל שהושמד
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(targetUnit);
+            }
+            
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
@@ -160,6 +176,14 @@ public class AIPlayerController : MonoBehaviour
         if (unit.Beats(targetUnit))
         {
             UnityEngine.Debug.Log($"🏆 AI wins! {unit.Kind} beats {targetUnit.Kind}");
+            
+            // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(targetUnit);
+            }
+            
             BoardManager.Instance.RemoveUnit(targetUnit);
             Destroy(targetUnit.gameObject);
             unit.MoveTo(targetPos);
@@ -171,6 +195,14 @@ public class AIPlayerController : MonoBehaviour
         if (targetUnit.Beats(unit))
         {
             UnityEngine.Debug.Log($"💀 AI loses. {targetUnit.Kind} beats {unit.Kind}");
+            
+            // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(unit);
+            }
+            
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -193,6 +225,15 @@ public class AIPlayerController : MonoBehaviour
             .Where(pos => {
                 Vector2Int delta = pos - unit.Position;
                 return Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1;
+            })
+            .Where(pos => {
+                // בדיקה שלא תוקפים את עצמנו
+                var targetUnit = BoardManager.Instance.GetUnitAt(pos) as RPSUnit;
+                if (targetUnit != null && targetUnit.playerId == unit.playerId)
+                {
+                    return false; // לא תוקפים את עצמנו
+                }
+                return true;
             })
             .ToList();
     }

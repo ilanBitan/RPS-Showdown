@@ -10,6 +10,9 @@ public class AIPlayerMediumController : AIPlayerController
     private Dictionary<Vector2Int, RPSUnit.RPSKind> revealedEnemies = new Dictionary<Vector2Int, RPSUnit.RPSKind>();
     private HashSet<Vector2Int> knownTraps = new HashSet<Vector2Int>();
 
+    // זיכרון של היחידה האחרונה ששיחקה
+    private RPSUnit lastPlayedUnit = null;
+
     protected override IEnumerator PerformAIAction()
     {
         if (PlayerController.gameEnded || !TurnManager.Instance.IsPlayerTurn(2))
@@ -161,9 +164,10 @@ public class AIPlayerMediumController : AIPlayerController
             foreach (var move in validMoves)
             {
                 var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
+                
+                // אם אין יחידה במיקום היעד - עדיפות 5 (תנועה לכיוון דמות לא חשופה)
                 if (enemy == null)
                 {
-                    // בדיקה אם המהלך מקרב אותנו ליחידה לא חשופה
                     var nearestUnrevealed = enemyUnits
                         .Where(e => !e.IsRevealed)
                         .OrderBy(e => Vector2Int.Distance(e.Position, unit.Position))
@@ -175,105 +179,100 @@ public class AIPlayerMediumController : AIPlayerController
                         float newDist = Vector2Int.Distance(move, nearestUnrevealed.Position);
                         if (newDist < currentDist)
                         {
-                            priorityMoves.Add((4, unit, move));
-                        }
-                        else
-                        {
-                            // גם תזוזה למשבצת ריקה היא אופציה, אבל בעדיפות נמוכה
                             priorityMoves.Add((5, unit, move));
+                            UnityEngine.Debug.Log($"🤖 {unit.name} at {unit.Position}: Priority 5 - Moving towards unrevealed unit (distance: {currentDist:F1} -> {newDist:F1})");
                         }
-                    }
-                    else
-                    {
-                        // אם אין יחידות לא חשופות, כל תזוזה חוקית היא אופציה
-                        priorityMoves.Add((5, unit, move));
                     }
                     continue;
                 }
 
+                // אם זו יחידה של ה-AI עצמו - דלג
                 if (enemy.playerId == unit.playerId)
                     continue;
 
-                // וידוא שהיחידה שאנחנו רוצים לתקוף נמצאת בדיוק במיקום שאליו אנחנו זזים
+                // וידוא שהיחידה שאנחנו רוצים לתקוף נמצאת בדיוק במיקום היעד
                 if (enemy.Position != move)
+                    continue;
+
+                // עדיפות 1: X שצמוד ל-Y חשופה והוא מנצח אותה
+                if (enemy.IsRevealed && unit.Beats(enemy))
                 {
-                    // אם זה לא מהלך תקיפה חוקי, ננסה לזוז למשבצת הזו אם היא ריקה
-                    if (BoardManager.Instance.GetUnitAt(move) == null)
-                    {
-                        priorityMoves.Add((5, unit, move));
-                    }
+                    priorityMoves.Add((1, unit, move));
+                    UnityEngine.Debug.Log($"🤖 {unit.name} at {unit.Position}: Priority 1 - Can beat {enemy.Kind} at {move}");
                     continue;
                 }
 
-                // בדיקת מלכודת או דגל - עדיפות הכי גבוהה (1)
-                if (enemy.role == RPSUnit.UnitRole.Trap || enemy.role == RPSUnit.UnitRole.Flag)
+                // עדיפות 2: X שצמוד ל-Y חשופה והוא עושה איתה דו קרב
+                if (enemy.IsRevealed && unit.Kind == enemy.Kind)
                 {
-                    if (!knownTraps.Contains(move))
-                        priorityMoves.Add((1, unit, move));
+                    priorityMoves.Add((2, unit, move));
+                    UnityEngine.Debug.Log($"🤖 {unit.name} at {unit.Position}: Priority 2 - Equal battle with {enemy.Kind} at {move}");
                     continue;
                 }
 
-                // בדיקת קרב
-                if (enemy.IsRevealed)
+                // עדיפות 3: X שצמוד ל-Y לא חשופה
+                if (!enemy.IsRevealed)
                 {
-                    if (unit.Beats(enemy))
-                        // ניצחון בטוח - עדיפות הכי גבוהה (1)
-                        priorityMoves.Add((1, unit, move));
-                    else if (unit.Kind == enemy.Kind)
-                        // תיקו - עדיפות שנייה (2)
-                        priorityMoves.Add((2, unit, move));
-                }
-                else
-                {
-                    // תקיפת יחידה לא ידועה - עדיפות שלישית (3)
                     priorityMoves.Add((3, unit, move));
+                    UnityEngine.Debug.Log($"🤖 {unit.name} at {unit.Position}: Priority 3 - Attacking unrevealed unit at {move}");
+                    continue;
                 }
-            }
-        }
 
-        // אם מצאנו מהלכים עם עדיפות, נבחר את הטוב ביותר
-        if (priorityMoves.Count > 0)
-        {
-            var bestMove = priorityMoves.OrderBy(m => m.priority).First();
-            UnityEngine.Debug.Log($"🎯 Best move found - Priority {bestMove.priority}: {bestMove.unit.name} to {bestMove.move}");
-            return (bestMove.unit, bestMove.move);
-        }
-
-        // אם לא מצאנו מהלכים עם עדיפות, נחפש את היחידה הכי קרובה ליחידה לא חשופה
-        var unrevealedEnemies = enemyUnits.Where(e => !e.IsRevealed).ToList();
-        if (unrevealedEnemies.Any())
-        {
-            var bestMove = (unit: (RPSUnit)null, move: Vector2Int.zero, distance: float.MaxValue);
-            
-            foreach (var enemy in unrevealedEnemies)
-            {
-                foreach (var unit in aiUnits)
+                // עדיפות 4: X שצמוד ל-Y חשופה והוא מפסיד לה - בורח
+                if (enemy.IsRevealed && enemy.Beats(unit))
                 {
-                    var moves = GetAdjacentMoves(unit)
-                        .Where(m => BoardManager.Instance.GetUnitAt(m) == null) // רק משבצות ריקות
+                    // מציאת מסלול בריחה (צעד אחד לכיוון אחר)
+                    var escapeMoves = validMoves
+                        .Where(m => m != move && BoardManager.Instance.GetUnitAt(m) == null)
                         .ToList();
 
-                    foreach (var move in moves)
+                    if (escapeMoves.Any())
                     {
-                        float distAfterMove = Vector2Int.Distance(move, enemy.Position);
-                        if (distAfterMove < bestMove.distance)
-                        {
-                            bestMove = (unit, move, distAfterMove);
-                        }
+                        var escapeMove = escapeMoves.First();
+                        priorityMoves.Add((4, unit, escapeMove));
+                        UnityEngine.Debug.Log($"🤖 {unit.name} at {unit.Position}: Priority 4 - Escaping from {enemy.Kind} to {escapeMove}");
                     }
+                    continue;
                 }
-            }
-
-            if (bestMove.unit != null)
-            {
-                UnityEngine.Debug.Log($"Moving {bestMove.unit.name} towards closest unrevealed enemy");
-                return (bestMove.unit, bestMove.move);
             }
         }
 
-        // זה לא אמור לקרות כי תמיד יש לפחות את הדגל שלא חשוף
-        UnityEngine.Debug.Log("Warning: No possible moves found - this should not happen!");
-        return null;
+        // אם אין מהלכים - סיים תור
+        if (priorityMoves.Count == 0)
+        {
+            UnityEngine.Debug.Log("🤖 No valid moves found.");
+            return null;
+        }
+
+        // מציאת העדיפות הגבוהה ביותר
+        int highestPriority = priorityMoves.Min(m => m.priority);
+        var bestMoves = priorityMoves.Where(m => m.priority == highestPriority).ToList();
+
+        // בחירת יחידה לפי הלוגיקה החדשה
+        RPSUnit selectedUnit = null;
+        Vector2Int selectedMove = Vector2Int.zero;
+
+        // בדיקה אם היחידה האחרונה נמצאת בעדיפות הגבוהה
+        var lastPlayedMove = bestMoves.FirstOrDefault(m => m.unit == lastPlayedUnit);
+        if (lastPlayedMove.unit != null)
+        {
+            selectedUnit = lastPlayedMove.unit;
+            selectedMove = lastPlayedMove.move;
+            UnityEngine.Debug.Log($"🤖 Selected last played unit: {selectedUnit.name} with priority {highestPriority}");
+        }
+        else
+        {
+            // בחירה רנדומלית מהעדיפות הגבוהה
+            var randomMove = bestMoves[UnityEngine.Random.Range(0, bestMoves.Count)];
+            selectedUnit = randomMove.unit;
+            selectedMove = randomMove.move;
+            UnityEngine.Debug.Log($"🤖 Selected random unit: {selectedUnit.name} with priority {highestPriority}");
+        }
+
+        // עדכון היחידה האחרונה ששיחקה
+        lastPlayedUnit = selectedUnit;
+
+        return (selectedUnit, selectedMove);
     }
 
     private bool IsGoodEmptyMove(RPSUnit unit, Vector2Int move, List<RPSUnit> enemies)
