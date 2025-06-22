@@ -194,6 +194,11 @@ public class BattleManager : MonoBehaviour
 
         if (playerWins)
         {
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(aiUnit);
+            }
             UnityEngine.Debug.Log("✅ Player wins the battle!");
             BoardManager.Instance.RemoveUnit(aiUnit);
             Destroy(aiUnit.gameObject);
@@ -202,6 +207,12 @@ public class BattleManager : MonoBehaviour
         }
         else if (aiWins)
         {
+                        // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(playerUnit);
+            }
             UnityEngine.Debug.Log("❌ AI wins the battle!");
             BoardManager.Instance.RemoveUnit(playerUnit);
             Destroy(playerUnit.gameObject);

@@ -208,6 +208,12 @@ public class PlayerController : MonoBehaviour
 
     void TryMoveUnit(RPSUnit unit, Vector2Int dir)
     {
+                // Add check for movable units
+        if (!unit.IsMovable())
+        {
+            UnityEngine.Debug.Log($"⛔ {unit.role} units cannot move!");
+            return;
+        }
         Vector2Int target = unit.Position + dir;
 
         if (target.x < 0 || target.x >= columns || target.y < 0 || target.y >= rows)
@@ -235,6 +241,12 @@ public class PlayerController : MonoBehaviour
                 {
                     UnityEngine.Debug.Log("🎯 You captured the enemy FLAG! YOU WIN!");
                     other.Reveal();
+                                        // עדכון ה-AI הקשה על דגל שהושמד
+                    var hardAI = FindObjectOfType<AIPlayerHardController>();
+                    if (hardAI != null)
+                    {
+                        hardAI.OnUnitDestroyed(other);
+                    }
                     MoveUnitTo(unit, target);
                     Destroy(other.gameObject);
                     ClearSelection();
@@ -259,6 +271,13 @@ public class PlayerController : MonoBehaviour
                     UnityEngine.Debug.Log("💥 Trap triggered! Attacker destroyed.");
 
                     unit.Reveal();
+                                        
+                    // עדכון ה-AI הקשה על דמות שהושמדה
+                    var hardAI = FindObjectOfType<AIPlayerHardController>();
+                    if (hardAI != null)
+                    {
+                        hardAI.OnUnitDestroyed(unit);
+                    }
                     Destroy(unit.gameObject);
                     ClearSelection();
 
@@ -293,6 +312,14 @@ public class PlayerController : MonoBehaviour
                 if (unit.Beats(other))
                 {
                     UnityEngine.Debug.Log("✅ Attacker wins – replacing enemy");
+                                        
+                    // עדכון ה-AI הקשה על דמות שהושמדה
+                    var hardAI = FindObjectOfType<AIPlayerHardController>();
+                    if (hardAI != null)
+                    {
+                        hardAI.OnUnitDestroyed(other);
+                    }
+                    
                     BoardManager.Instance.RemoveUnit(other);
                     Destroy(other.gameObject);
                     MoveUnitTo(unit, target);
@@ -300,6 +327,14 @@ public class PlayerController : MonoBehaviour
                 else
                 {
                     UnityEngine.Debug.Log("❌ Attacker loses – removed");
+                                        
+                    // עדכון ה-AI הקשה על דמות שהושמדה
+                    var hardAI = FindObjectOfType<AIPlayerHardController>();
+                    if (hardAI != null)
+                    {
+                        hardAI.OnUnitDestroyed(unit);
+                    }
+                    
                     BoardManager.Instance.RemoveUnit(unit);
                     Destroy(unit.gameObject);
                 }

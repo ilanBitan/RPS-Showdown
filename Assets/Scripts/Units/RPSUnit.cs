@@ -118,6 +118,11 @@ public class RPSUnit : Unit
         isRevealed = true;
         UpdateVisual();
         UnityEngine.Debug.Log($"📣 {name} Revealed → {GetLetter()}");
+        var hardAI = FindObjectOfType<AIPlayerHardController>();
+        if (hardAI != null)
+        {
+            hardAI.OnUnitRevealed(this);
+        }
     }
 
     public void ResetVisual()
@@ -232,6 +237,12 @@ public class RPSUnit : Unit
 
     public bool TryMove(Vector2Int direction)
     {
+                // Add check for movable units
+        if (!IsMovable())
+        {
+            UnityEngine.Debug.Log($"🚫 {role} units cannot move!");
+            return false;
+        }
         Vector2Int targetPos = Position + direction;
 
         if (!BoardManager.Instance.IsInsideBoard(targetPos))
@@ -273,6 +284,12 @@ public class RPSUnit : Unit
                     PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
                 }
 
+                                // עדכון ה-AI הקשה על דמות שהושמדה
+                var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(this);
+                }
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
@@ -281,6 +298,12 @@ public class RPSUnit : Unit
             if (enemy.role == UnitRole.Flag)
             {
                 UnityEngine.Debug.Log("🎯 Flag captured!");
+                                // עדכון ה-AI הקשה על דגל שהושמד
+                var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(enemy);
+                }
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
@@ -313,6 +336,13 @@ public class RPSUnit : Unit
             if (this.Beats(enemy))
             {
                 UnityEngine.Debug.Log($"✅ {this.Kind} beats {enemy.Kind}!");
+                                
+                // עדכון ה-AI הקשה על דמות שהושמדה
+                var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(enemy);
+                }
                 BoardManager.Instance.RemoveUnit(enemy);
                 Destroy(enemy.gameObject);
                 MoveTo(targetPos);
@@ -321,10 +351,18 @@ public class RPSUnit : Unit
             else
             {
                 UnityEngine.Debug.Log($"❌ {enemy.Kind} beats {this.Kind}!");
+                // עדכון ה-AI הקשה על דמות שהושמדה
+                var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(this);
+                }
             if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
             {
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
+            
+            
                 BoardManager.Instance.RemoveUnit(this);
                 Destroy(this.gameObject);
                 return false;
@@ -355,9 +393,15 @@ public class RPSUnit : Unit
     public void MoveTo(Vector2Int newPos)
     {
         // Handle board management logic
+        Vector2Int oldPos = Position;
         BoardManager.Instance.MoveUnit(this, newPos);
         SetPosition(newPos);
-
+        // עדכון ה-AI הקשה על תזוזה
+        var hardAI = FindObjectOfType<AIPlayerHardController>();
+        if (hardAI != null)
+        {
+            hardAI.OnUnitMoved(this, oldPos, newPos);
+        }
         // Get the target tile transform
         Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
         if (targetTile != null)
