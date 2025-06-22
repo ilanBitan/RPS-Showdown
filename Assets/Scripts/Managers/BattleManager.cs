@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
@@ -200,6 +200,14 @@ public class BattleManager : MonoBehaviour
                 hardAI.OnUnitDestroyed(aiUnit);
             }
             UnityEngine.Debug.Log("✅ Player wins the battle!");
+            
+            // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(aiUnit);
+            }
+            
             BoardManager.Instance.RemoveUnit(aiUnit);
             Destroy(aiUnit.gameObject);
             playerUnit.MoveTo(targetPos);
@@ -214,6 +222,14 @@ public class BattleManager : MonoBehaviour
                 hardAI.OnUnitDestroyed(playerUnit);
             }
             UnityEngine.Debug.Log("❌ AI wins the battle!");
+            
+            // עדכון ה-AI הקשה על דמות שהושמדה
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(playerUnit);
+            }
+            
             BoardManager.Instance.RemoveUnit(playerUnit);
             Destroy(playerUnit.gameObject);
             aiUnit.MoveTo(targetPos);

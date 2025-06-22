@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 using System.Collections;
 using System.Diagnostics;
@@ -392,6 +392,8 @@ public class RPSUnit : Unit
 
     public void MoveTo(Vector2Int newPos)
     {
+        Vector2Int oldPos = Position;
+        
         // Handle board management logic
         Vector2Int oldPos = Position;
         BoardManager.Instance.MoveUnit(this, newPos);
