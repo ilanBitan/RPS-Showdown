@@ -4,25 +4,89 @@ using UnityEngine.EventSystems;
 public class TouchMovementHandler : MonoBehaviour
 {
     public PlayerController playerController;
-
+    
+    void Start()
+    {
+        Debug.Log("נ”„ TouchMovementHandler started!");
+        if (playerController == null)
+            Debug.LogError("ג PlayerController is not assigned!");
+        if (Camera.main == null)
+            Debug.LogError("ג No main camera found!");
+    }
+    
     void Update()
     {
+        // Check for any input
+        if (Input.anyKeyDown || Input.GetMouseButtonDown(0) || Input.touches.Length > 0)
+        {
+            Debug.Log("נ“± Input detected!");
+        }
+        
+        // Check mouse click
         if (Input.GetMouseButtonDown(0))
         {
-            // למנוע לחיצה על UI
+            Debug.Log("נ–±ן¸ Mouse button down detected!");
+            
+            // Skip if touching UI
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return;
-
-            Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
-
-            if (hit.collider != null)
             {
+                Debug.Log("נ« Touch blocked by UI");
+                return;
+            }
+                
+            Vector2 screenPos = Input.mousePosition;
+            Vector2 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
+            Debug.Log($"נ“± Touch at screen: {screenPos}, world: {worldPos}");
+            
+            // Use RaycastAll to get all colliders at this position
+            RaycastHit2D[] hits = Physics2D.RaycastAll(worldPos, Vector2.zero);
+            Debug.Log($"נ¯ Found {hits.Length} colliders");
+            
+            foreach (RaycastHit2D hit in hits)
+            {
+                Debug.Log($"נ” Hit: {hit.collider.name} on object {hit.collider.gameObject.name}");
+                
                 Tile tile = hit.collider.GetComponent<Tile>();
                 if (tile != null && playerController != null)
                 {
+                    Debug.Log($"ג… Found tile at position {tile.Position}");
                     playerController.OnTileTapped(tile.Position);
+                    return; // Found tile, stop searching
                 }
+            }
+            
+            Debug.Log("ג No tile found in raycast hits");
+        }
+        
+        // Also check for touch input (mobile)
+        if (Input.touches.Length > 0)
+        {
+            Touch touch = Input.touches[0];
+            if (touch.phase == TouchPhase.Began)
+            {
+                Debug.Log("נ‘† Touch began!");
+                
+                Vector2 screenPos = touch.position;
+                Vector2 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
+                Debug.Log($"נ“± Touch at screen: {screenPos}, world: {worldPos}");
+                
+                RaycastHit2D[] hits = Physics2D.RaycastAll(worldPos, Vector2.zero);
+                Debug.Log($"נ¯ Found {hits.Length} colliders");
+                
+                foreach (RaycastHit2D hit in hits)
+                {
+                    Debug.Log($"נ” Hit: {hit.collider.name} on object {hit.collider.gameObject.name}");
+                    
+                    Tile tile = hit.collider.GetComponent<Tile>();
+                    if (tile != null && playerController != null)
+                    {
+                        Debug.Log($"ג… Found tile at position {tile.Position}");
+                        playerController.OnTileTapped(tile.Position);
+                        return;
+                    }
+                }
+                
+                Debug.Log("ג No tile found in raycast hits");
             }
         }
     }
