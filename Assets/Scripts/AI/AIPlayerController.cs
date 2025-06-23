@@ -172,6 +172,19 @@ public class AIPlayerController : MonoBehaviour
             BattleManager.Instance?.StartBattle(unit, targetUnit, targetPos);
             yield break;
         }
+         // ✨ הוספת אנימציית קרב לכל המקרים
+        if (FightAnimationManager.Instance != null)
+        {
+            // עדכון תצוגת הנשקים
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(targetUnit.Kind, unit.Kind);
+            
+            // הפעלת אנימציית הקרב
+           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+            
+            // עדכון הספרייטים לפני התוצאה
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(targetUnit.Kind, unit.Kind);
+        }
+        
 
         if (unit.Beats(targetUnit))
         {
@@ -182,6 +195,12 @@ public class AIPlayerController : MonoBehaviour
             if (hardAI != null)
             {
                 hardAI.OnUnitDestroyed(targetUnit);
+            }
+
+                        // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(false, true));
             }
             
             BoardManager.Instance.RemoveUnit(targetUnit);
@@ -203,6 +222,10 @@ public class AIPlayerController : MonoBehaviour
                 hardAI.OnUnitDestroyed(unit);
             }
             
+            if (FightAnimationManager.Instance != null)
+            {
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(true, false));
+            }
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
             TurnManager.Instance?.EndTurn();
@@ -297,21 +320,8 @@ public class AIPlayerController : MonoBehaviour
                 BattleManager.Instance?.StartBattle(unit, enemy, target);
                 return;
             }
-
-            if (unit.Beats(enemy))
-            {
-                UnityEngine.Debug.Log($"🏆 {unit.name} wins the battle at {target}: {unit.Kind} beats {enemy.Kind}");
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-            }
-            else
-            {
-                UnityEngine.Debug.Log($"💀 {unit.name} loses the battle at {target}: {enemy.Kind} beats {unit.Kind}");
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-            }
+            // ✨ הוספת אנימציית קרב
+             StartCoroutine(ExecuteCombatWithAnimation(unit, enemy, target));
         }
         else
         {
@@ -321,5 +331,69 @@ public class AIPlayerController : MonoBehaviour
 
         TurnManager.Instance?.EndTurn();
     }
+
+     private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
+    {
+         if (FightAnimationManager.Instance != null)
+        {
+            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
+            bool isPlayerAttacking = attacker.playerId == 1;
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
+            }
+            
+            // הפעלת אנימציית הקרב
+           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+            
+            // עדכון הספרייטים
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(defender.Kind, attacker.Kind);
+            }
+        }
+ 
+        if (attacker.Beats(defender))
+        {
+            Debug.Log($"🏆 {attacker.name} wins the battle at {target}: {attacker.Kind} beats {defender.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = attacker.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(defender);
+            Destroy(defender.gameObject);
+            BoardManager.Instance.PlaceUnit(attacker, target);
+            attacker.MoveTo(target);
+        }
+        else
+        {
+            Debug.Log($"💀 {attacker.name} loses the battle at {target}: {defender.Kind} beats {attacker.Kind}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = defender.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+            
+            BoardManager.Instance.RemoveUnit(attacker);
+            Destroy(attacker.gameObject);
+        }
+
+        TurnManager.Instance?.EndTurn();
+    }
+
 }
 
