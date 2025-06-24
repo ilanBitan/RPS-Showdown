@@ -314,8 +314,16 @@ public class RPSUnit : Unit
                 {
                     PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
                 }
+                            PlayerController.gameEnded = true;
+            
+            // Set player as loser
+            TurnTimerManager.Instance?.SetPlayerWon(true);
+            
+            // Stop all game systems
+            TurnManager.Instance?.StopGame();
+            return true;
+                
 
-                return true;
             }
 
             // Battle logic
