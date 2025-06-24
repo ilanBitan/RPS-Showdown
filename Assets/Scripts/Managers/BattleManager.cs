@@ -64,6 +64,16 @@ public class BattleManager : MonoBehaviour
     public void ShowPlayerPanel()
     {
         // Update weapon display before animation starts
+if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+    {
+    if (playerUnit.playerId != 1)
+    {
+        var temp = playerUnit;
+        playerUnit = aiUnit;
+        aiUnit = temp;
+    }
+    }
+
         FightAnimationManager.Instance?.UpdatePreChoiceWeaponDisplay(playerUnit.Kind, aiUnit.Kind);
 
         StartCoroutine(AnimateFightPanelThenShowBattle());

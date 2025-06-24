@@ -3,6 +3,9 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Diagnostics;
 using TMPro;
+using System.Collections;
+
+
 
 public class PlayerController : MonoBehaviour
 {
@@ -311,35 +314,8 @@ public class PlayerController : MonoBehaviour
                 unit.Reveal();
                 other.Reveal();
 
-                if (unit.Beats(other))
-                {
-                    UnityEngine.Debug.Log("✅ Attacker wins – replacing enemy");
-                                        
-                    // עדכון ה-AI הקשה על דמות שהושמדה
-                    var hardAI = FindObjectOfType<AIPlayerHardController>();
-                    if (hardAI != null)
-                    {
-                        hardAI.OnUnitDestroyed(other);
-                    }
-                    
-                    BoardManager.Instance.RemoveUnit(other);
-                    Destroy(other.gameObject);
-                    MoveUnitTo(unit, target);
-                }
-                else
-                {
-                    UnityEngine.Debug.Log("❌ Attacker loses – removed");
-                                        
-                    // עדכון ה-AI הקשה על דמות שהושמדה
-                    var hardAI = FindObjectOfType<AIPlayerHardController>();
-                    if (hardAI != null)
-                    {
-                        hardAI.OnUnitDestroyed(unit);
-                    }
+             StartCoroutine(ExecuteCombatWithAnimation(unit, other, target, originalPosition));
 
-                    BoardManager.Instance.RemoveUnit(unit);
-                    Destroy(unit.gameObject);
-                }
 
                 // Log move for PvP
                 if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
@@ -365,6 +341,96 @@ public class PlayerController : MonoBehaviour
         ClearSelection();
         TurnManager.Instance?.EndTurn();
     }
+ private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
+    {
+        if (FightAnimationManager.Instance != null)
+        {
+            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
+            bool isPlayerAttacking = attacker.playerId == 1;
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
+            }
+            
+            // הפעלת אנימציית הקרב
+           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+  
+            // עדכון הספרייטים
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
+            }
+            else
+            {
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(defender.Kind, attacker.Kind);
+            }
+        }
+
+        if (attacker.Beats(defender))
+        {
+            UnityEngine.Debug.Log($"✅ {attacker.name} wins – replacing {defender.name}");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = attacker.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }
+                var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(defender);
+                }
+            
+            BoardManager.Instance.RemoveUnit(defender);
+            StartCoroutine(PlayJumpAndRemove(defender));
+            MoveUnitTo(attacker, targetPos);
+        }
+        else if (defender.Beats(attacker))
+        {
+            UnityEngine.Debug.Log($"💀 {attacker.name} loses to {defender.name} and is destroyed");
+            
+            // הצגת תוצאת הקרב
+            if (FightAnimationManager.Instance != null)
+            {
+                bool playerWon = defender.playerId == 1;
+                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
+            }              
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+                if (hardAI != null)
+                {
+                    hardAI.OnUnitDestroyed(attacker);
+                }
+
+             if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
+            BoardManager.Instance.RemoveUnit(attacker);
+            StartCoroutine(PlayJumpAndRemove(attacker));
+        }
+        else
+        {
+            UnityEngine.Debug.Log("❓ Unhandled combat case");
+        }
+    }
+       private IEnumerator PlayJumpAndRemove(RPSUnit unit, float delay = 0.5f)
+{
+    Animator anim = unit.GetComponent<Animator>();
+    if (anim != null)
+    {
+        anim.SetInteger("playerId", unit.playerId); // ✅ Correctly get player ID
+        anim.ResetTrigger("jump");
+        anim.SetTrigger("jump");
+    }
+    yield return new WaitForSeconds(delay);
+    Destroy(unit.gameObject);
+}
+
 
     void MoveUnitTo(RPSUnit unit, Vector2Int target)
     {

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 using System.Collections;
 using System.Diagnostics;
@@ -359,6 +359,7 @@ public class RPSUnit : Unit
     
         private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
     {
+        UnityEngine.Debug.Log($"🔥 im from rpsunit {attacker.name} is attacking {defender.name}");
         if (FightAnimationManager.Instance != null)
         {
             // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
@@ -405,6 +406,7 @@ public class RPSUnit : Unit
             {
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
+
                 
             
             BoardManager.Instance.RemoveUnit(defender);
