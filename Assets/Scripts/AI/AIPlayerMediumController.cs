@@ -140,6 +140,13 @@ public class AIPlayerMediumController : AIPlayerController
 
         if (FightAnimationManager.Instance != null)
         {
+
+            FightAnimationManager.Instance.fightPanel?.SetActive(true);
+            FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+            FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+            yield return null;
+
+            
             // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
             bool isPlayerAttacking = attacker.playerId == 1;
             if (isPlayerAttacking)

@@ -18,7 +18,7 @@ public class FightAnimationManager : MonoBehaviour
     public GameObject enemyWeaponDisplay;
     
     private bool playIntro = true;
-
+   
 
 private void Awake()
     {
@@ -88,6 +88,7 @@ private void Awake()
     public IEnumerator ShowFightResult(bool playerWon, bool aiWon)
     {
         fightPanel?.SetActive(true);
+        
 
         Animator playerAnimator = fightPlayer?.GetComponent<Animator>();
         Animator enemyAnimator = fightEnemy?.GetComponent<Animator>();
@@ -101,9 +102,11 @@ private void Awake()
         {
             playerAnimator?.SetTrigger("lost");
             enemyAnimator?.SetTrigger("won");
-        }
+        }   
+        
+        UnityEngine.Debug.Log("Fight result: Player won: " + playerWon + ", AI won: " + aiWon);
 
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(2.1f);
 
         fightPanel?.SetActive(false);
     }
