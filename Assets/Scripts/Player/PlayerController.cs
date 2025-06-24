@@ -219,28 +219,12 @@ public class PlayerController : MonoBehaviour
         // Store original position for logging
         Vector2Int originalPosition = unit.Position;
 
-        UnityEngine.Debug.Log($"[HOST BOARD CHECK] === CHECKING TARGET POSITION {target} ===");
-        UnityEngine.Debug.Log($"[HOST BOARD CHECK] Moving unit: {unit.name} (Player {unit.playerId}, {unit.Kind}) from {originalPosition} to {target}");
-
-        // Debug: Show what BoardManager thinks is at target position
-        var boardManagerUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
-        if (boardManagerUnit != null)
-        {
-            UnityEngine.Debug.Log($"[HOST BOARD CHECK] BoardManager sees at {target}: {boardManagerUnit.name} (Player {boardManagerUnit.playerId}, {boardManagerUnit.Kind}) at actual position {boardManagerUnit.Position}");
-        }
-        else
-        {
-            UnityEngine.Debug.Log($"[HOST BOARD CHECK] BoardManager sees {target} as EMPTY");
-        }
-
         foreach (var other in FindObjectsOfType<RPSUnit>())
         {
             if (other == null) continue;
             if (other == unit) continue;
             if (other.Position == target)
             {
-                UnityEngine.Debug.Log($"[HOST BOARD CHECK] FOUND TARGET UNIT: {other.name} (Player {other.playerId}, {other.Kind}, Role: {other.role}) at position {other.Position}");
-
                 if (other.playerId == myPlayerId)
                 {
                     UnityEngine.Debug.Log("🚫 Cell is occupied by your own unit");
@@ -310,17 +294,12 @@ public class PlayerController : MonoBehaviour
 
                 if (unit.Beats(other))
                 {
-                    UnityEngine.Debug.Log($"[HOST BATTLE RESULT] ✅ HOST WINS! {unit.name} ({unit.Kind}, Player {unit.playerId}) BEATS {other.name} ({other.Kind}, Player {other.playerId})");
-                    UnityEngine.Debug.Log($"[HOST BATTLE RESULT] Removing enemy unit: {other.name} (Player {other.playerId})");
-                    UnityEngine.Debug.Log($"[HOST BATTLE RESULT] Moving winning unit to {target}");
                     BoardManager.Instance.RemoveUnit(other);
                     Destroy(other.gameObject);
                     MoveUnitTo(unit, target);
                 }
                 else
                 {
-                    UnityEngine.Debug.Log($"[HOST BATTLE RESULT] ❌ HOST LOSES! {other.name} ({other.Kind}, Player {other.playerId}) BEATS {unit.name} ({unit.Kind}, Player {unit.playerId})");
-                    UnityEngine.Debug.Log($"[HOST BATTLE RESULT] Removing host unit: {unit.name} (Player {unit.playerId})");
                     BoardManager.Instance.RemoveUnit(unit);
                     Destroy(unit.gameObject);
                 }
@@ -338,7 +317,6 @@ public class PlayerController : MonoBehaviour
         }
 
         // Normal move to empty space
-        UnityEngine.Debug.Log($"[HOST BOARD CHECK] NO TARGET UNIT FOUND - Moving to empty space at {target}");
         MoveUnitTo(unit, target);
 
         // Log move for PvP
@@ -401,8 +379,6 @@ public class PlayerController : MonoBehaviour
             unit.Position = targetGridPos;
             BoardManager.Instance.MoveUnit(unit, targetGridPos);
         }
-
-        UnityEngine.Debug.Log($"✅ [PlayerController] Moved {unit.name} from {oldPos} to {targetGridPos}");
     }
 
 
