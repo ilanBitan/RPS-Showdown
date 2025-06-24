@@ -12,7 +12,7 @@ using System.Linq;
 /// </summary>
 public class PvPMoveLogger : MonoBehaviour
 {
-    public static PvPMoveLogger Instance;
+    public static PvPMoveLogger Instance { get; private set; }
 
     private string currentRoomId;
     private bool isHost;
@@ -31,12 +31,12 @@ public class PvPMoveLogger : MonoBehaviour
 
     private void Awake()
     {
+        // Ensure only one instance exists
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-
         Instance = this;
     }
 
@@ -654,7 +654,7 @@ public class PvPMoveLogger : MonoBehaviour
     {
         if (string.IsNullOrEmpty(currentRoomId) || roomRef == null)
         {
-            UnityEngine.Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
+            Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
             return;
         }
 
@@ -674,7 +674,8 @@ public class PvPMoveLogger : MonoBehaviour
             // Update nextStep field in server
             var updates = new Dictionary<string, object>
             {
-                { "nextStep", moveDescription }
+                { "nextStep", moveDescription },
+                { "lastMoveTime", ServerValue.Timestamp }
             };
 
             await roomRef.UpdateChildrenAsync(updates);
