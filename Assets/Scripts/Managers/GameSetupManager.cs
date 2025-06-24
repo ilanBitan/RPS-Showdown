@@ -724,6 +724,15 @@ public class GameSetupManager : MonoBehaviour
 
         setupComplete = true;
 
+        // FIXED: Stop listening to room changes after setup is complete in PvP mode
+        // This prevents the game from loading the initial board state during gameplay
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && isListening && roomRef != null)
+        {
+            roomRef.ValueChanged -= HandleRoomValueChanged;
+            isListening = false;
+            UnityEngine.Debug.Log("[GameSetup] 🔕 Stopped listening to room changes - setup complete, game in progress");
+        }
+
         // Always update visuals regardless of game mode
         foreach (var unit in player1Units) unit.UpdateVisual();
         foreach (var unit in player2Units) unit.UpdateVisual();
