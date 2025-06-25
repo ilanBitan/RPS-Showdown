@@ -30,7 +30,7 @@ public class RoomManager : MonoBehaviour
 
     private void Start()
     {
-        // Initialize UI - רק אם הפאנל לא כבר פעיל
+        // Initialize UI
         if (!roomPanel.activeSelf)
         {
             roomPanel.SetActive(false);
@@ -70,8 +70,8 @@ public class RoomManager : MonoBehaviour
 
     private async void CreateRoom()
     {
-        // Generate a unique room ID
-        currentRoomId = Guid.NewGuid().ToString();
+        // Generate a unique 8-digit room ID
+        currentRoomId = await GenerateUniqueShortRoomId();
         isHost = true;
 
         UnityEngine.Debug.Log($"Creating room with ID: {currentRoomId}");
@@ -280,6 +280,45 @@ public class RoomManager : MonoBehaviour
                 }
             }
         };
+    }
+
+    /// <summary>
+    /// Generate a short 8-digit room ID that's easy to share
+    /// </summary>
+    private async Task<string> GenerateUniqueShortRoomId()
+    {
+        System.Random random = new System.Random();
+
+        // Try up to 10 times to find a unique room ID
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            int roomNumber = random.Next(10000000, 99999999); // 8-digit number
+            string roomId = roomNumber.ToString();
+
+            // Check if this room ID already exists
+            DataSnapshot snapshot = await roomsRef.Child(roomId).GetValueAsync();
+            if (!snapshot.Exists)
+            {
+                UnityEngine.Debug.Log($"Generated unique room ID: {roomId} (attempt {attempt + 1})");
+                return roomId;
+            }
+
+            UnityEngine.Debug.Log($"Room ID {roomId} already exists, trying again... (attempt {attempt + 1})");
+        }
+
+        // Fallback to GUID if we can't find a unique short ID (very unlikely)
+        UnityEngine.Debug.LogWarning("Could not generate unique short room ID after 10 attempts, falling back to GUID");
+        return Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+    }
+
+    /// <summary>
+    /// Synchronous wrapper for generating short room ID (for backwards compatibility)
+    /// </summary>
+    private string GenerateShortRoomId()
+    {
+        System.Random random = new System.Random();
+        int roomNumber = random.Next(10000000, 99999999);
+        return roomNumber.ToString();
     }
 
     private void OnDestroy()

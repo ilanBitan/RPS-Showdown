@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using System.Collections;
 using System.Linq;
+using System.Diagnostics;
 
 /// <summary>
 /// Manages logging and synchronization of moves in PVP mode
@@ -550,12 +551,18 @@ public class PvPMoveLogger : MonoBehaviour
             BoardManager.Instance.RemoveUnit(unit);
             Destroy(unit.gameObject);
 
-            // Synchronize turn after guest (player 2) completed their move
+            // Synchronize turn after either player completed their move
             if (unit.playerId == 2 && TurnManager.Instance != null)
             {
                 // Since guest just moved, now it should be host's turn (player 1)
                 TurnManager.Instance.StartPlayerTurn();
                 UnityEngine.Debug.Log("[PvPMoveLogger] Guest stepped on trap - starting host's turn");
+            }
+            else if (unit.playerId == 1 && TurnManager.Instance != null)
+            {
+                // Since host just moved, now it should be guest's turn (player 2)
+                TurnManager.Instance.EndTurn();
+                UnityEngine.Debug.Log("[PvPMoveLogger] Host stepped on trap - starting guest's turn");
             }
             yield break;
         }
@@ -572,8 +579,8 @@ public class PvPMoveLogger : MonoBehaviour
             // Set player as loser
             TurnTimerManager.Instance?.SetPlayerWon(false);
 
-            // Update PvP statistics - I lost (opponent won)
-            UpdatePvPGameStatistics(false);
+            // Note: PvP statistics are updated by PlayerController when flag is captured
+            // No need to update them here to avoid duplication
 
             // Stop all game systems
             TurnManager.Instance?.StopGame();
@@ -626,6 +633,12 @@ public class PvPMoveLogger : MonoBehaviour
 
 
                 // Synchronize turn after guest (player 2) completed their move
+                if (unit.playerId == 2 && TurnManager.Instance != null)
+                {
+                    // Since guest just moved, now it should be host's turn (player 1)
+                    TurnManager.Instance.EndTurn();
+                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest lost battle - starting host's turn");
+                }
                 if (unit.playerId == 1 && TurnManager.Instance != null)
                 {
                     // Since guest just moved, now it should be host's turn (player 1)
@@ -654,7 +667,7 @@ public class PvPMoveLogger : MonoBehaviour
     {
         if (string.IsNullOrEmpty(currentRoomId) || roomRef == null)
         {
-            Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
+            UnityEngine.Debug.LogWarning("[PvPMoveLogger] Cannot log move - room not initialized");
             return;
         }
 
