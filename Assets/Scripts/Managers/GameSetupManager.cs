@@ -65,6 +65,39 @@ public class GameSetupManager : MonoBehaviour
         }
     }
 
+
+private void SetEnemyUnitVisibility(bool visible)
+{
+    List<RPSUnit> enemyUnits = null;
+    
+    if (GameModeManager.Instance.SelectedMode == GameMode.PvP)
+    {
+        enemyUnits = isHost ? player2Units : player1Units;
+    }
+    else
+    {
+        // In PvE mode, enemy units are always player2Units
+        enemyUnits = player2Units;
+    }
+    
+    if (enemyUnits != null)
+    {
+        foreach (var unit in enemyUnits)
+        {
+            if (unit != null)
+            {
+                // Get the Image component and set its visibility
+                UnityEngine.UI.Image imageComponent = unit.GetComponent<UnityEngine.UI.Image>();
+                if (imageComponent != null)
+                {
+                    imageComponent.enabled = visible;
+                }
+            }
+        }
+    }
+}
+
+
     public async void StartSetup(List<RPSUnit> p1Units, List<RPSUnit> p2Units, string roomId = "", bool isHostPlayer = true)
     {
         // Prevent multiple setup calls
@@ -163,6 +196,7 @@ public class GameSetupManager : MonoBehaviour
                     unit.DisableSetupSelection();
                     unit.ResetVisual();
                 }
+                //SetEnemyUnitVisibility(false);
                 UnityEngine.Debug.Log($"[GameSetup] Setup started. You are the HOST. Select FLAG for your pieces (bottom rows). Room ID: {currentRoomId}");
             }
             else
@@ -203,6 +237,8 @@ public class GameSetupManager : MonoBehaviour
                 unit.DisableSetupSelection();
                 unit.ResetVisual();
             }
+            SetEnemyUnitVisibility(false);
+
             UnityEngine.Debug.Log("[GameSetup] Setup started. Select FLAG for Player 1.");
         }
 
@@ -723,15 +759,6 @@ public class GameSetupManager : MonoBehaviour
         }
 
         setupComplete = true;
-
-        // FIXED: Stop listening to room changes after setup is complete in PvP mode
-        // This prevents the game from loading the initial board state during gameplay
-        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && isListening && roomRef != null)
-        {
-            roomRef.ValueChanged -= HandleRoomValueChanged;
-            isListening = false;
-            UnityEngine.Debug.Log("[GameSetup] 🔕 Stopped listening to room changes - setup complete, game in progress");
-        }
 
         // Always update visuals regardless of game mode
         foreach (var unit in player1Units) unit.UpdateVisual();
