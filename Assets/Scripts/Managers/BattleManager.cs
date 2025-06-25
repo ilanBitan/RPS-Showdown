@@ -63,16 +63,30 @@ public class BattleManager : MonoBehaviour
 
     public void ShowPlayerPanel()
     {
+        // For PvP mode, use simple logic without animation
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            battlePanel?.SetActive(true);
+
+            rockButton.onClick.RemoveAllListeners();
+            rockButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
+
+            paperButton.onClick.RemoveAllListeners();
+            paperButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Paper));
+
+            scissorsButton.onClick.RemoveAllListeners();
+            scissorsButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Scissors));
+            return;
+        }
+
+        // For single player mode, use animation
         // Update weapon display before animation starts
-if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
-    {
-    if (playerUnit.playerId != 1)
-    {
-        var temp = playerUnit;
-        playerUnit = aiUnit;
-        aiUnit = temp;
-    }
-    }
+        if (playerUnit.playerId != 1)
+        {
+            var temp = playerUnit;
+            playerUnit = aiUnit;
+            aiUnit = temp;
+        }
 
         FightAnimationManager.Instance?.UpdatePreChoiceWeaponDisplay(playerUnit.Kind, aiUnit.Kind);
 
@@ -112,10 +126,16 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
 
         if (isHardLevel)
         {
+            UnityEngine.Debug.Log("Hard level detected - AI will make smart choice based on player statistics");
+
+            // קבלת סטטיסטיקות מהשרת
             FirebaseManager.Instance?.DatabaseService?.GetUserStats((userData) =>
             {
                 if (userData != null)
                 {
+                    UnityEngine.Debug.Log($"Player statistics - Rock: {userData.rockChoices}, Paper: {userData.paperChoices}, Scissors: {userData.scissorsChoices}");
+
+                    // מציאת הכלי הנפוץ ביותר של השחקן
                     RPSUnit.RPSKind mostCommonChoice = RPSUnit.RPSKind.Rock;
                     int maxCount = userData.rockChoices;
 
@@ -130,26 +150,46 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
                         maxCount = userData.scissorsChoices;
                     }
 
+                    UnityEngine.Debug.Log($"Player's most common choice: {mostCommonChoice}");
+
+                    // בחירת הכלי המנצח
                     switch (mostCommonChoice)
                     {
-                        case RPSUnit.RPSKind.Rock: aiChoice = RPSUnit.RPSKind.Paper; break;
-                        case RPSUnit.RPSKind.Paper: aiChoice = RPSUnit.RPSKind.Scissors; break;
-                        case RPSUnit.RPSKind.Scissors: aiChoice = RPSUnit.RPSKind.Rock; break;
+                        case RPSUnit.RPSKind.Rock:
+                            aiChoice = RPSUnit.RPSKind.Paper;
+                            break;
+                        case RPSUnit.RPSKind.Paper:
+                            aiChoice = RPSUnit.RPSKind.Scissors;
+                            break;
+                        case RPSUnit.RPSKind.Scissors:
+                            aiChoice = RPSUnit.RPSKind.Rock;
+                            break;
                     }
+
+                    UnityEngine.Debug.Log($"AI chose {aiChoice} to counter player's {mostCommonChoice}");
                 }
                 else
                 {
-                    aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
+                    // אם אין נתונים, נבחר באופן רנדומלי
+                    aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
+                    UnityEngine.Debug.Log("No player statistics available - AI chose randomly: " + aiChoice);
                 }
 
+                // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
                 FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+
                 ResolveBattle();
             });
         }
         else
         {
-            aiChoice = (RPSUnit.RPSKind)Random.Range(0, 3);
+            // רמה רגילה - בחירה רנדומלית
+            aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
+            UnityEngine.Debug.Log($"Battle initiated! Player chose {playerChoice}, AI chose {aiChoice} (random)");
+
+            // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
             FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
+
             ResolveBattle();
         }
     }
@@ -161,6 +201,7 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
         bool playerWins = Beats(playerChoice, aiChoice);
         bool aiWins = Beats(aiChoice, playerChoice);
 
+        // חשיפת שתי היחידות תמיד
         playerUnit.Kind = playerChoice;
         aiUnit.Kind = aiChoice;
 
@@ -170,6 +211,52 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
         playerUnit.UpdateVisual();
         aiUnit.UpdateVisual();
 
+        // For PvP mode, use simple logic without animation
+        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+        {
+            // בדיקת ניצחון אם FLAG נחשף
+            if (playerUnit.role == RPSUnit.UnitRole.Flag)
+            {
+                //FindObjectOfType<GameEndHandler>().ShowVictory("Player 2");
+                return;
+            }
+            if (aiUnit.role == RPSUnit.UnitRole.Flag)
+            {
+                //   FindObjectOfType<GameEndHandler>().ShowVictory("Player 1");
+                return;
+            }
+
+            if (playerWins)
+            {
+                UnityEngine.Debug.Log("✅ Player wins the battle!");
+                BoardManager.Instance.RemoveUnit(aiUnit);
+                Destroy(aiUnit.gameObject);
+                playerUnit.MoveTo(targetPos);
+                EndBattle();
+            }
+            else if (aiWins)
+            {
+                UnityEngine.Debug.Log("❌ AI wins the battle!");
+                BoardManager.Instance.RemoveUnit(playerUnit);
+                Destroy(playerUnit.gameObject);
+                aiUnit.MoveTo(targetPos);
+                EndBattle();
+            }
+            else
+            {
+                UnityEngine.Debug.Log("🤝 Tie – rematch round!");
+                battlePanel?.SetActive(true);
+                Invoke(nameof(ShowPlayerPanel), 0.5f);
+                return;
+            }
+
+            foreach (var controller in FindObjectsOfType<PlayerController>())
+                controller.ClearSelection();
+            
+            return;
+        }
+
+        // For single player mode, use animation
         // Update the fight display sprites through animation manager
         FightAnimationManager.Instance?.UpdateFightDisplaySprites(playerChoice, aiChoice);
 
@@ -198,7 +285,6 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
 
         if (playerWon)
         {
-    
             UnityEngine.Debug.Log("✅ Player wins the battle!");
             
             // עדכון ה-AI הקשה על דמות שהושמדה
@@ -214,8 +300,6 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
         }
         else if (aiWon)
         {
-                        // עדכון ה-AI הקשה על דמות שהושמדה
-
             UnityEngine.Debug.Log("❌ AI wins the battle!");
             
             // עדכון ה-AI הקשה על דמות שהושמדה
@@ -241,6 +325,13 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
         unit.MoveTo(target);
     }
 
+    private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
+    {
+        return (a == RPSUnit.RPSKind.Rock && b == RPSUnit.RPSKind.Scissors) ||
+               (a == RPSUnit.RPSKind.Paper && b == RPSUnit.RPSKind.Rock) ||
+               (a == RPSUnit.RPSKind.Scissors && b == RPSUnit.RPSKind.Paper);
+    }
+
     private void EndBattle()
     {
         isBattleActive = false;
@@ -249,13 +340,6 @@ if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Insta
         battlePanel?.SetActive(false);
 
         TurnManager.Instance?.EndTurn();
-    }
-
-    private bool Beats(RPSUnit.RPSKind a, RPSUnit.RPSKind b)
-    {
-        return (a == RPSUnit.RPSKind.Rock && b == RPSUnit.RPSKind.Scissors) ||
-               (a == RPSUnit.RPSKind.Paper && b == RPSUnit.RPSKind.Rock) ||
-               (a == RPSUnit.RPSKind.Scissors && b == RPSUnit.RPSKind.Paper);
     }
 
     public bool IsBattleActive()
