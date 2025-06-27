@@ -599,60 +599,24 @@ public class PvPMoveLogger : MonoBehaviour
         {
             // Simple battle - resolve immediately using same logic as RPSUnit.TryMove
             UnityEngine.Debug.Log($"[PvPMoveLogger] Simple battle detected - resolving immediately: {unit.Kind} vs {targetUnit.Kind}");
+// Simple battle - resolve using combat animation system
 
-            if (unit.Beats(targetUnit))
-            {
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] ✅ GUEST WINS! {unit.name} ({unit.Kind}, Player {unit.playerId}) BEATS {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Removing host unit: {targetUnit.name} (Player {targetUnit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Moving winning guest unit from {unit.Position} to {targetPos}");
+Vector2Int originalPosition = unit.Position;
+yield return StartCoroutine(unit.ExecuteCombatWithAnimation(unit, targetUnit, targetPos, originalPosition));
 
-                BoardManager.Instance.RemoveUnit(targetUnit);
-                Destroy(targetUnit.gameObject);
-                Vector2Int oldPos = unit.Position;
-                unit.MoveTo(targetPos);
+// Synchronize turn after guest (player 2) completed their move
+if (unit.playerId == 2 && TurnManager.Instance != null)
+{
+    TurnManager.Instance.StartPlayerTurn();
+    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest simple battle ended - starting host's turn");
+}
+else if (unit.playerId == 1 && TurnManager.Instance != null)
+{
+    TurnManager.Instance.EndTurn();
+    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Host simple battle ended - starting guest's turn");
+}
+yield break;
 
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Winner {unit.name} moved from {oldPos} to {unit.Position}");
-                yield return new WaitForSeconds(0.6f);
-
-                // Synchronize turn after guest (player 2) completed their move
-                if (unit.playerId == 2 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.StartPlayerTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest won battle - starting host's turn");
-                }
-                yield break;
-
-            }
-            else if (targetUnit.Beats(unit))
-            {
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] ❌ GUEST LOSES! {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId}) BEATS {unit.name} ({unit.Kind}, Player {unit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Removing guest unit: {unit.name} (Player {unit.playerId})");
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-
-
-                // Synchronize turn after guest (player 2) completed their move
-                if (unit.playerId == 2 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.EndTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest lost battle - starting host's turn");
-                }
-                if (unit.playerId == 1 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.EndTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest lost battle - starting host's turn");
-                }
-                yield break;
-
-            }
-            else
-            {
-                // This shouldn't happen for simple battles, but just in case
-                UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unexpected tie in simple battle: {unit.Kind} vs {targetUnit.Kind}");
-            }
 
             yield return new WaitForSeconds(0.5f);
         }
