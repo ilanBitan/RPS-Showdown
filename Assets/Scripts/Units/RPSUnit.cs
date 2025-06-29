@@ -429,7 +429,15 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
 }
 
 
+public IEnumerator HandleTrapEncounter(RPSUnit trapUnit)
+{
+    yield return StartCoroutine(HandleTrapEncounter(this, trapUnit, trapUnit.Position));
+}
 
+public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
+{
+    yield return StartCoroutine(HandleFlagCapture(this, flagUnit, flagUnit.Position));
+}
 
     
         public IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
