@@ -9,6 +9,8 @@ public class TurnTimerManager : MonoBehaviour
     public TextMeshProUGUI timerText;
     public float turnDuration = 10f;
     public GameObject playAgainContainer;
+    public TextMeshProUGUI playAgainText;
+    public Button playAgainButton;
 
     private float currentTime;
     private bool timerRunning = false;
@@ -22,16 +24,35 @@ public class TurnTimerManager : MonoBehaviour
         else
             Instance = this;
 
-        // וודא שכפתור Play Again תמיד מוצג אבל לא לחיץ בהתחלה
+        // Auto-assign playAgainButton if not set
+        if (playAgainButton == null && playAgainContainer != null)
+        {
+            playAgainButton = playAgainContainer.GetComponentInChildren<Button>();
+            Debug.Log($"[DEBUG] playAgainButton auto-assigned: {playAgainButton?.gameObject.name}");
+        }
+        else
+        {
+            Debug.Log($"[DEBUG] playAgainButton assigned in inspector: {playAgainButton?.gameObject.name}");
+        }
+
+        // Make sure the Play Again button is always visible but not interactable at start
+        if (playAgainButton != null)
+        {
+            playAgainButton.interactable = false;
+            Debug.Log($"[DEBUG] playAgainButton.interactable = false (Awake)");
+        }
         if (playAgainContainer != null)
         {
             playAgainContainer.SetActive(true);
-            var button = playAgainContainer.GetComponentInChildren<Button>();
-            if (button != null)
-            {
-                button.interactable = false;
-            }
         }
+        // Auto-find PlayAgainText if not assigned manually
+        if (playAgainText == null && playAgainContainer != null)
+        {
+            playAgainText = playAgainContainer.GetComponentInChildren<TextMeshProUGUI>();
+        }
+        // Clear button text at game start
+        if (playAgainText != null)
+            playAgainText.text = "";
     }
 
     public void ActivateGameTimer()
@@ -46,6 +67,12 @@ public class TurnTimerManager : MonoBehaviour
         currentTime = turnDuration;
         timerRunning = true;
         UpdateDisplay();
+        // Update turn button text
+        if (TurnManager.Instance != null && playAgainText != null)
+        {
+            bool isPlayerTurn = TurnManager.Instance.IsPlayerTurn(1); // 1 = always local player
+            UpdateTurnButtonText(isPlayerTurn, false);
+        }
         UnityEngine.Debug.Log("[TurnTimerManager] Timer started - new turn begins");
     }
 
@@ -58,17 +85,9 @@ public class TurnTimerManager : MonoBehaviour
     public void SetPlayerWon(bool won)
     {
         playerWon = won;
-        // הפוך את הכפתור ללחיץ כשהמשחק נגמר
-        if (playAgainContainer != null)
-        {
-            var button = playAgainContainer.GetComponentInChildren<Button>();
-            if (button != null)
-            {
-                button.interactable = true;
-            }
-        }
-
-        // עדכון סטטיסטיקות בשרת רק במשחקי PvE
+        // Update button text to end game state
+        UpdateTurnButtonText(false, true);
+        // Update player statistics on server only in PvE games
         if (GameModeManager.Instance != null && IsPlayerVsComputer())
         {
             UpdatePlayerStatistics(won);
@@ -96,7 +115,7 @@ public class TurnTimerManager : MonoBehaviour
             return;
         }
 
-        // קבלת הסטטיסטיקות הנוכחיות מהשרת
+        // Get current statistics from server
         dbService.GetUserStats((userData) => {
             if (userData == null)
             {
@@ -106,11 +125,11 @@ public class TurnTimerManager : MonoBehaviour
 
             if (playerWon)
             {
-                // עדכון נצחונות
+                // Update wins
                 int newWins = userData.wins + 1;
                 dbService.UpdateUserWins(newWins);
 
-                // עדכון נקודות בהתאם לרמת קושי
+                // Update points based on difficulty
                 int pointsToAdd = GetPointsForDifficulty();
                 int newScore = userData.score + pointsToAdd;
                 dbService.UpdateUserScore(newScore);
@@ -119,7 +138,7 @@ public class TurnTimerManager : MonoBehaviour
             }
             else
             {
-                // עדכון הפסדים
+                // Update losses
                 int newLosses = userData.losses + 1;
                 dbService.UpdateUserLosses(newLosses);
 
@@ -144,7 +163,7 @@ public class TurnTimerManager : MonoBehaviour
     {
         if (PlayerController.gameEnded)
         {
-            // אם המשחק נגמר - להציג הודעה במקום טיימר
+            // If the game ends, show a message instead of the timer
             if (timerText != null)
             {
                 timerText.text = playerWon ? "YOU WIN!" : "YOU LOSE!";
@@ -185,5 +204,51 @@ public class TurnTimerManager : MonoBehaviour
                 timerText.text = Mathf.CeilToInt(currentTime).ToString();
             }
         }
+    }
+
+    public void UpdateTurnButtonText(bool isPlayerTurn, bool isGameEnded)
+    {
+        // Try to find PlayAgainText dynamically if it's still null
+        if (playAgainText == null)
+        {
+            var found = GameObject.Find("PlayAgainText");
+            if (found != null)
+            {
+                playAgainText = found.GetComponent<TMPro.TextMeshProUGUI>();
+                Debug.Log("[DEBUG] playAgainText was null, found and assigned dynamically!");
+            }
+        }
+        if (playAgainButton == null && playAgainContainer != null)
+        {
+            playAgainButton = playAgainContainer.GetComponentInChildren<Button>();
+            Debug.Log($"[DEBUG] playAgainButton was null, auto-assigned: {playAgainButton?.gameObject.name}");
+        }
+        Debug.Log($"[DEBUG] UpdateTurnButtonText called. isPlayerTurn={isPlayerTurn}, isGameEnded={isGameEnded}");
+        if (playAgainText == null)
+        {
+            Debug.LogError("[DEBUG] playAgainText is STILL NULL after dynamic search!");
+            return;
+        }
+        if (isGameEnded)
+        {
+            playAgainText.text = "PLAY AGAIN!";
+            // Make button interactable only at game end
+            if (playAgainButton != null)
+            {
+                playAgainButton.interactable = true;
+                Debug.Log("[DEBUG] playAgainButton.interactable = true (game ended)");
+            }
+        }
+        else
+        {
+            playAgainText.text = isPlayerTurn ? "YOUR TURN" : "ENEMY TURN";
+            // Make button NOT interactable during the game
+            if (playAgainButton != null)
+            {
+                playAgainButton.interactable = false;
+                Debug.Log("[DEBUG] playAgainButton.interactable = false (game active)");
+            }
+        }
+        Debug.Log($"[DEBUG] playAgainText.text set to: {playAgainText.text}");
     }
 }
