@@ -194,12 +194,13 @@ public class PvPMoveLogger : MonoBehaviour
     /// </summary>
     private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultData)
     {
+        BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+
         if (!battleResultData.ContainsKey("winner") || !battleResultData.ContainsKey("hostChoice") || !battleResultData.ContainsKey("guestChoice"))
         {
             UnityEngine.Debug.LogError("[PvPMoveLogger] Invalid battle result data");
             yield break;
         }
-
         string winner = battleResultData["winner"].ToString();
         string hostChoiceStr = battleResultData["hostChoice"].ToString();
         string guestChoiceStr = battleResultData["guestChoice"].ToString();
@@ -593,6 +594,8 @@ public class PvPMoveLogger : MonoBehaviour
             // Tie battle - must go through battle system for player choices
             UnityEngine.Debug.Log($"[PvPMoveLogger] Tie battle detected - setting up battle system: {unit.Kind} vs {targetUnit.Kind}");
             SetupBattleState(targetUnit, unit, targetPos, false);
+            BattleManager.Instance?.SetUnits(targetUnit, unit); // Make sure you set the units!
+
             BattleManager.Instance?.ShowPlayerPanel();
         }
         else
@@ -995,7 +998,8 @@ yield break;
                     // Clear battle choices on server
                     await roomRef.Child("battleChoice").RemoveValueAsync();
 
-                    BattleManager.Instance?.ShowPlayerPanel();
+                    BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+BattleManager.Instance.ShowPlayerPanel();
                 }
             }
         }
