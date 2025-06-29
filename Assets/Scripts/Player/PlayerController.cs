@@ -495,6 +495,7 @@ public class PlayerController : MonoBehaviour
 
     public void OnPlayAgainButtonClicked()
     {
+        UnityEngine.Debug.Log("[DEBUG] PlayAgainButton was clicked!");
         PlayerController.gameEnded = false;
 
         // Destroy all managers to start fresh

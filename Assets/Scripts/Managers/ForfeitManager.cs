@@ -27,11 +27,20 @@ public class ForfeitManager : MonoBehaviour
 
     public void OnYesButtonClick()
     {
-        // Increment the loss count in Firebase
+        // Check if the game has ended - if so, allow exit without penalty
+        if (PlayerController.gameEnded)
+        {
+            Debug.Log("Game has ended. Player can exit without penalty.");
+            // Load the main menu scene without incrementing losses
+            SceneManager.LoadScene("MainMenuScene");
+            return;
+        }
+
+        // Game is still active - increment the loss count in Firebase
         FirebaseManager.Instance.DatabaseService.IncrementUserLossesAsync();
 
         // Load the main menu scene
-        Debug.Log("Player forfeited. Returning to Main Menu.");
+        Debug.Log("Player forfeited during active game. Returning to Main Menu.");
         SceneManager.LoadScene("MainMenuScene");
     }
 

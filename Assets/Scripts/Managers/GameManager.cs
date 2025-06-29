@@ -73,12 +73,15 @@ public class GameManager : MonoBehaviour
 
         timerManager.timerText = GameObject.Find("TimerText")?.GetComponent<TextMeshProUGUI>();
         timerManager.playAgainContainer = GameObject.Find("PlayAgainContainer");
+        timerManager.playAgainText = GameObject.Find("PlayAgainText")?.GetComponent<TMPro.TextMeshProUGUI>();
 
         if (timerManager.timerText == null)
             Debug.LogError("❌ TimerText not found in GameScene");
         
         if (timerManager.playAgainContainer == null)
             Debug.LogError("❌ PlayAgainContainer not found in GameScene");
+        if (timerManager.playAgainText == null)
+            Debug.LogError("❌ PlayAgainText not found in GameScene");
     }
 
     private void AssignBoardManagerFields()

@@ -69,6 +69,8 @@ public class TurnManager : MonoBehaviour
         if (!gameActive) return;
         isPlayer1Turn = true;
         TurnTimerManager.Instance?.StartTurn();
+        // Update turn button text
+        TurnTimerManager.Instance?.UpdateTurnButtonText(true, false);
     }
 
     public void StartAITurn()
@@ -76,6 +78,8 @@ public class TurnManager : MonoBehaviour
         if (!gameActive) return;
         isPlayer1Turn = false;
         TurnTimerManager.Instance?.StartTurn();
+        // Update turn button text
+        TurnTimerManager.Instance?.UpdateTurnButtonText(false, false);
     }
 
     public void StartGuestTurn()
@@ -83,6 +87,8 @@ public class TurnManager : MonoBehaviour
         if (!gameActive) return;
         isPlayer1Turn = true;
         TurnTimerManager.Instance?.StartTurn();
+        // Update turn button text
+        TurnTimerManager.Instance?.UpdateTurnButtonText(true, false);
     }
 
     public void EndTurn()
@@ -94,6 +100,8 @@ public class TurnManager : MonoBehaviour
         {
             isPlayer1Turn = !isPlayer1Turn;
             TurnTimerManager.Instance?.StartTurn();
+            // Update turn button text
+            TurnTimerManager.Instance?.UpdateTurnButtonText(isPlayer1Turn, false);
             UnityEngine.Debug.Log($"[TurnManager] PvP turn ended. Next turn: Player {(isPlayer1Turn ? 1 : 2)}");
             return;
         }
@@ -101,6 +109,8 @@ public class TurnManager : MonoBehaviour
         // In PvE mode - original logic
         isPlayer1Turn = !isPlayer1Turn;
         TurnTimerManager.Instance?.StartTurn();
+        // Update turn button text
+        TurnTimerManager.Instance?.UpdateTurnButtonText(isPlayer1Turn, false);
 
         if (!isPlayer1Turn)
         {
@@ -127,7 +137,8 @@ public class TurnManager : MonoBehaviour
     {
         gameActive = false;
         TurnTimerManager.Instance?.StopTimer();
-
+        // Update turn button text to end game state
+        TurnTimerManager.Instance?.UpdateTurnButtonText(false, true);
         // Stop listening to moves in PvP mode
         if (PvPMoveLogger.Instance != null)
         {
