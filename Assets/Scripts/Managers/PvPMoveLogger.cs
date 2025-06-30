@@ -20,6 +20,8 @@ public class PvPMoveLogger : MonoBehaviour
     private DatabaseReference roomRef;
     private bool isListening = false;
     private string lastProcessedMove = "";
+    private RPSUnit.RPSKind? lastTieChoice;
+
 
     // Battle state tracking
     private bool isInBattle = false;
@@ -188,6 +190,40 @@ public class PvPMoveLogger : MonoBehaviour
             
              if(!isBattleInitiator)
             {
+if (battleResultData.ContainsKey("tieRestart"))
+{
+    UnityEngine.Debug.Log("[PvPMoveLogger] Tie restart received - updating units with tieChoice!");
+
+    if (battleResultData.ContainsKey("tieChoice"))
+    {
+        string tieChoiceStr = battleResultData["tieChoice"].ToString();
+        RPSUnit.RPSKind tieChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), tieChoiceStr);
+
+        myBattleUnit.Kind = tieChoice;
+        opponentBattleUnit.Kind = tieChoice;
+
+        myBattleUnit.Reveal();
+        opponentBattleUnit.Reveal();
+        myBattleUnit.UpdateVisual();
+        opponentBattleUnit.UpdateVisual();
+    }
+    else
+    {
+        UnityEngine.Debug.LogError("[PvPMoveLogger] Tie restart but no tieChoice found!");
+    }
+
+    myBattleChoice = null;
+    opponentBattleChoice = null;
+
+    BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+    BattleManager.Instance.ShowPlayerPanel();
+    return;
+}
+
+
+
+
+
             StartCoroutine(ApplyBattleResult(battleResultData));
             }
             else
@@ -867,15 +903,42 @@ yield break;
                 else
                 {
                     // Tie - restart battle
-                    UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
-                    myBattleChoice = null;
-                    opponentBattleChoice = null;
+                    // Tie - restart battle
+UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
 
-                    // Clear battle choices on server
-                    await roomRef.Child("battleChoice").RemoveValueAsync();
+// Update real units with new choices so intro shows correct weapons
+if (myBattleChoice.HasValue && opponentBattleChoice.HasValue)
+{
+    myBattleUnit.Kind = myBattleChoice.Value;
+    opponentBattleUnit.Kind = opponentBattleChoice.Value;
 
-                    BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
-                    BattleManager.Instance.ShowPlayerPanel();
+    myBattleUnit.Reveal();
+    opponentBattleUnit.Reveal();
+    myBattleUnit.UpdateVisual();
+    opponentBattleUnit.UpdateVisual();
+}
+
+// Clear battle choices on server
+await roomRef.Child("battleChoice").RemoveValueAsync();
+
+// 🔑 OPTIONAL: Write a tieRestart flag for the non-initiator (your logic for that looks fine)
+var tieRestartResult = new Dictionary<string, object>
+{
+    { "winner", null },
+    { "tieRestart", true },
+    { "tieChoice", myBattleChoice.Value.ToString() }
+};
+await roomRef.Child("battleResult").SetValueAsync(tieRestartResult);
+
+// Clear local choices so next input is fresh
+myBattleChoice = null;
+opponentBattleChoice = null;
+
+// Show next tie panel using the real updated units
+BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+BattleManager.Instance.ShowPlayerPanel();
+
+
                 }
             }
         }
@@ -1075,6 +1138,8 @@ private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultDat
     string winner = battleResultData["winner"].ToString();
     string hostChoiceStr = battleResultData["hostChoice"].ToString();
     string guestChoiceStr = battleResultData["guestChoice"].ToString();
+
+
 
     RPSUnit.RPSKind hostChoice;
     RPSUnit.RPSKind guestChoice;
