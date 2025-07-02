@@ -325,7 +325,7 @@ public class RPSUnit : Unit
 
     // Empty space movement
     MoveTo(targetPos);
-    BoardManager.Instance.PlaceUnit(this, targetPos);
+    //BoardManager.Instance.PlaceUnit(this, targetPos);
 
     // Log move for PvP
     if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
@@ -416,7 +416,7 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
     BoardManager.Instance.RemoveUnit(flag);
     Destroy(flag.gameObject);
     MoveTo(targetPos);
-    BoardManager.Instance.PlaceUnit(this, targetPos);
+    //BoardManager.Instance.PlaceUnit(this, targetPos);
 
     PlayerController.gameEnded = true;
 
