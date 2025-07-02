@@ -61,158 +61,143 @@ public class AIPlayerMediumController : AIPlayerController
         }
     }
 
-    private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
+private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
+{
+    var enemyUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
+
+    // בדיקה שהמהלך חוקי - רק צעד אחד
+    Vector2Int delta = target - unit.Position;
+    if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
     {
-        var enemyUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
-
-        // בדיקה שהמהלך חוקי - רק צעד אחד
-        Vector2Int delta = target - unit.Position;
-        if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
-        {
-            Debug.Log($"🚫 Invalid move: {unit.name} tried to move more than one step from {unit.Position} to {target}");
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        if (enemyUnit == null)
-        {
-            // תזוזה למשבצת ריקה
-            Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
-            unit.MoveTo(target);
-            yield return new WaitForSeconds(0.6f);
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
-        if (enemyUnit.Position != target)
-        {
-            Debug.Log($"🚫 Cannot attack: Target unit is at {enemyUnit.Position} but move is to {target}");
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        // חשיפת יחידות בקרב
-        unit.Reveal();
-        enemyUnit.Reveal();
-
-        if (enemyUnit.role == RPSUnit.UnitRole.Trap)
-        {
-            Debug.Log($"💥 {unit.name} stepped on trap!");
-            knownTraps.Add(target);
-            BoardManager.Instance.RemoveUnit(unit);
-            Destroy(unit.gameObject);
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        if (enemyUnit.role == RPSUnit.UnitRole.Flag)
-        {
-            Debug.Log($"🎯 {unit.name} captured the FLAG! YOU LOSE!");
-            BoardManager.Instance.RemoveUnit(enemyUnit);
-            Destroy(enemyUnit.gameObject);
-            unit.MoveTo(target);
-            PlayerController.gameEnded = true;
-            
-            // Set player as loser
-            TurnTimerManager.Instance?.SetPlayerWon(false);
-            
-            // Stop all game systems
-            TurnManager.Instance?.StopGame();
-            yield break;
-        }
-
-        if (unit.Kind == enemyUnit.Kind)
-        {
-            Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemyUnit.name} at {target}");
-            BattleManager.Instance?.StartBattle(unit, enemyUnit, target);
-            yield break;
-        }
-
-        // ✨ Execute combat with animation for non-tie battles
-        yield return StartCoroutine(ExecuteCombatWithAnimation(unit, enemyUnit, target));
+        Debug.Log($"🚫 Invalid move: {unit.name} tried to move more than one step from {unit.Position} to {target}");
+        TurnManager.Instance?.EndTurn();
+        yield break;
     }
 
-    // ✨ New method for handling combat with animation (same as base class)
-    private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
+    if (enemyUnit == null)
     {
+        // תזוזה למשבצת ריקה
+        Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
+        unit.MoveTo(target);
+        yield return new WaitForSeconds(0.6f);
+        TurnManager.Instance?.EndTurn();
+        yield break;
+    }
 
+    // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
+    if (enemyUnit.Position != target)
+    {
+        Debug.Log($"🚫 Cannot attack: Target unit is at {enemyUnit.Position} but move is to {target}");
+        TurnManager.Instance?.EndTurn();
+        yield break;
+    }
 
+    // חשיפת יחידות בקרב
+    unit.Reveal();
+    enemyUnit.Reveal();
+
+    // Handle Trap encounters with animation
+    if (enemyUnit.role == RPSUnit.UnitRole.Trap)
+    {
+        Debug.Log($"💥 {unit.name} stepped on trap!");
+        knownTraps.Add(target);
+        
+        // Show trap animation
         if (FightAnimationManager.Instance != null)
         {
-
             FightAnimationManager.Instance.fightPanel?.SetActive(true);
             FightAnimationManager.Instance.fightPlayer?.SetActive(true);
             FightAnimationManager.Instance.fightEnemy?.SetActive(true);
             yield return null;
 
-            
-            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
-            bool isPlayerAttacking = attacker.playerId == 1;
+            // Update weapon display for trap encounter
+            bool isPlayerAttacking = unit.playerId == 1;
             if (isPlayerAttacking)
             {
-                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, defender.Kind);
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(unit.Kind, enemyUnit.role);
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(unit.Kind, enemyUnit.role);
             }
             else
             {
-                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
+                // For AI attacking trap, we need to handle it differently
+                // We'll show the AI unit's kind vs the trap
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(enemyUnit.role, unit.Kind);
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(enemyUnit.role, unit.Kind);
             }
             
-            // הפעלת אנימציית הקרב
-           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
-            
-            // עדכון הספרייטים
-            if (isPlayerAttacking)
-            {
-                FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
-            }
-            else
-            {
-                FightAnimationManager.Instance.UpdateFightDisplaySprites(defender.Kind, attacker.Kind);
-            }
+            // Show trap result (whoever steps on trap loses)
+            yield return StartCoroutine(FightAnimationManager.Instance.ShowTrapResult(unit.playerId == 1));
         }
-
-
-        if (attacker.Beats(defender))
-        {
-            Debug.Log($"🏆 {attacker.name} wins! {attacker.Kind} beats {defender.Kind}");
-            
-            // הצגת תוצאת הקרב
-            if (FightAnimationManager.Instance != null)
-            {
-                bool playerWon = attacker.playerId == 1;
-                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
-            }
-            
-            BoardManager.Instance.RemoveUnit(defender);
-            Destroy(defender.gameObject);
-            attacker.MoveTo(target);
-            yield return new WaitForSeconds(0.6f);
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        if (defender.Beats(attacker))
-        {
-            Debug.Log($"💀 {attacker.name} loses the battle at {target}: {defender.Kind} beats {attacker.Kind}");
-            
-            // הצגת תוצאת הקרב
-            if (FightAnimationManager.Instance != null)
-            {
-                bool playerWon = defender.playerId == 1;
-                yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
-            }
-            
-            BoardManager.Instance.RemoveUnit(attacker);
-            Destroy(attacker.gameObject);
-            TurnManager.Instance?.EndTurn();
-            yield break;
-        }
-
-        // במקרה שמשהו השתבש, נסיים את התור
-        Debug.Log("🔄 Unexpected case - ending turn");
+        
+        BoardManager.Instance.RemoveUnit(unit);
+        Destroy(unit.gameObject);
         TurnManager.Instance?.EndTurn();
+        yield break;
     }
+
+    // Handle Flag capture with animation
+    if (enemyUnit.role == RPSUnit.UnitRole.Flag)
+    {
+        Debug.Log($"🎯 {unit.name} captured the FLAG!");
+        
+        // Show flag capture animation
+        if (FightAnimationManager.Instance != null)
+        {
+            FightAnimationManager.Instance.fightPanel?.SetActive(true);
+            FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+            FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+            yield return null;
+
+            // Update weapon display for flag capture
+            bool isPlayerAttacking = unit.playerId == 1;
+            if (isPlayerAttacking)
+            {
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(unit.Kind, enemyUnit.role);
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(unit.Kind, enemyUnit.role);
+            }
+            else
+            {
+                // AI capturing flag
+                FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(enemyUnit.role, unit.Kind);
+                FightAnimationManager.Instance.UpdateFightDisplaySprites(enemyUnit.role, unit.Kind);
+            }
+            
+            // Show flag capture result
+            yield return StartCoroutine(FightAnimationManager.Instance.ShowFlagCaptureResult(unit.playerId == 1));
+        }
+        
+        BoardManager.Instance.RemoveUnit(enemyUnit);
+        Destroy(enemyUnit.gameObject);
+        unit.MoveTo(target);
+        PlayerController.gameEnded = true;
+        
+        // Set winner/loser based on who captured the flag
+        if (unit.playerId == 1)
+        {
+            Debug.Log("🎉 PLAYER WINS! Flag captured!");
+            TurnTimerManager.Instance?.SetPlayerWon(true);
+        }
+        else
+        {
+            Debug.Log("💀 YOU LOSE! AI captured the flag!");
+            TurnTimerManager.Instance?.SetPlayerWon(false);
+        }
+        
+        // Stop all game systems
+        TurnManager.Instance?.StopGame();
+        yield break;
+    }
+
+    if (unit.Kind == enemyUnit.Kind)
+    {
+        Debug.Log($"🤝 Tie – starting battle panel between {unit.name} and {enemyUnit.name} at {target}");
+        BattleManager.Instance?.StartBattle(unit, enemyUnit, target);
+        yield break;
+    }
+
+    // ✨ Execute combat with animation for non-tie battles
+    yield return StartCoroutine(ExecuteCombatWithAnimation(unit, enemyUnit, target));
+}
 
     private (RPSUnit unit, Vector2Int target)? FindBestMove(List<RPSUnit> aiUnits, List<RPSUnit> enemyUnits)
     {
@@ -352,3 +337,7 @@ public class AIPlayerMediumController : AIPlayerController
         return true;
     }
 }
+
+
+
+

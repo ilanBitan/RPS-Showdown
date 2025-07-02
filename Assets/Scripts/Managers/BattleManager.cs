@@ -62,20 +62,28 @@ public class BattleManager : MonoBehaviour
     }
 
     public void ShowPlayerPanel()
+
     {
+            if (playerUnit == null || aiUnit == null)
+    {
+        UnityEngine.Debug.LogError("[BattleManager] Cannot show player panel - units not set!");
+        return;
+    }
         // For PvP mode, use simple logic without animation
         if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
         {
             battlePanel?.SetActive(true);
 
-            rockButton.onClick.RemoveAllListeners();
-            rockButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
+          if (playerUnit.playerId != 1)
+        {
+            var temp = playerUnit;
+            playerUnit = aiUnit;
+            aiUnit = temp;
+        }
 
-            paperButton.onClick.RemoveAllListeners();
-            paperButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Paper));
+        FightAnimationManager.Instance?.UpdatePreChoiceWeaponDisplay(playerUnit.Kind, aiUnit.Kind);
 
-            scissorsButton.onClick.RemoveAllListeners();
-            scissorsButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Scissors));
+        StartCoroutine(AnimateFightPanelThenShowBattle());
             return;
         }
 
@@ -92,7 +100,11 @@ public class BattleManager : MonoBehaviour
 
         StartCoroutine(AnimateFightPanelThenShowBattle());
     }
-
+public void SetUnits(RPSUnit player, RPSUnit ai)
+{
+    this.playerUnit = player;
+    this.aiUnit = ai;
+}
     private IEnumerator AnimateFightPanelThenShowBattle()
     {
         // Play the fight intro animation
@@ -229,18 +241,13 @@ public class BattleManager : MonoBehaviour
             if (playerWins)
             {
                 UnityEngine.Debug.Log("✅ Player wins the battle!");
-                BoardManager.Instance.RemoveUnit(aiUnit);
-                Destroy(aiUnit.gameObject);
-                playerUnit.MoveTo(targetPos);
-                EndBattle();
+                  StartCoroutine(ShowFightResultAndFinish(true, false));
             }
             else if (aiWins)
             {
                 UnityEngine.Debug.Log("❌ AI wins the battle!");
-                BoardManager.Instance.RemoveUnit(playerUnit);
-                Destroy(playerUnit.gameObject);
-                aiUnit.MoveTo(targetPos);
-                EndBattle();
+                StartCoroutine(ShowFightResultAndFinish(false, true)); // 👈 Use same animation!
+
             }
             else
             {

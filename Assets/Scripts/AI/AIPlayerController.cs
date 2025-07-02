@@ -128,15 +128,15 @@ public class AIPlayerController : MonoBehaviour
             UnityEngine.Debug.Log("💥 AI stepped on trap and is destroyed.");
             
             // עדכון ה-AI הקשה על דמות שהושמדה
-            var hardAI = FindObjectOfType<AIPlayerHardController>();
-            if (hardAI != null)
-            {
-                hardAI.OnUnitDestroyed(unit);
-            }
-            
-            BoardManager.Instance.RemoveUnit(unit);
-            Destroy(unit.gameObject);
-            TurnManager.Instance?.EndTurn();
+            // var hardAI = FindObjectOfType<AIPlayerHardController>();
+            // if (hardAI != null)
+            // {
+            //     hardAI.OnUnitDestroyed(unit);
+            // }
+            StartCoroutine(HandleTrapEncounter(unit, targetUnit, targetPos));
+            // BoardManager.Instance.RemoveUnit(unit);
+            // Destroy(unit.gameObject);
+            // TurnManager.Instance?.EndTurn();
             yield break;
         }
 
@@ -145,16 +145,18 @@ public class AIPlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log("🎯 AI captured the FLAG! YOU LOSE!");
             
-            // עדכון ה-AI הקשה על דגל שהושמד
-            var hardAI = FindObjectOfType<AIPlayerHardController>();
-            if (hardAI != null)
-            {
-                hardAI.OnUnitDestroyed(targetUnit);
-            }
+            // // עדכון ה-AI הקשה על דגל שהושמד
+            // var hardAI = FindObjectOfType<AIPlayerHardController>();
+            // if (hardAI != null)
+            // {
+            //     hardAI.OnUnitDestroyed(targetUnit);
+            // }
             
-            BoardManager.Instance.RemoveUnit(targetUnit);
-            Destroy(targetUnit.gameObject);
-            unit.MoveTo(targetPos);
+            // BoardManager.Instance.RemoveUnit(targetUnit);
+            // Destroy(targetUnit.gameObject);
+            // unit.MoveTo(targetPos);
+            StartCoroutine(HandleFlagCapture(unit, targetUnit, targetPos));
+
             PlayerController.gameEnded = true;
 
             // Set player as loser
@@ -291,20 +293,23 @@ public class AIPlayerController : MonoBehaviour
             if (enemy.role == RPSUnit.UnitRole.Trap)
             {
                 UnityEngine.Debug.Log($"💥 {unit.name} stepped on a TRAP at {target} and was destroyed");
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-                TurnManager.Instance?.EndTurn();
+                StartCoroutine(HandleTrapEncounter(unit, enemy, target));
                 return;
             }
 
             if (enemy.role == RPSUnit.UnitRole.Flag)
             {
                 UnityEngine.Debug.Log($"🎯 {unit.name} captured the FLAG at {target}! YOU LOSE!");
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                BoardManager.Instance.PlaceUnit(unit, target);
-                unit.MoveTo(target);
-                PlayerController.gameEnded = true;
+                StartCoroutine(HandleFlagCapture(unit, enemy, target));
+
+                
+                
+                
+                // BoardManager.Instance.RemoveUnit(enemy);
+                // Destroy(enemy.gameObject);
+                // BoardManager.Instance.PlaceUnit(unit, target);
+                // unit.MoveTo(target);
+                // PlayerController.gameEnded = true;
 
                 // Set player as loser
                 TurnTimerManager.Instance?.SetPlayerWon(false);
@@ -332,7 +337,102 @@ public class AIPlayerController : MonoBehaviour
         TurnManager.Instance?.EndTurn();
     }
 
-     private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
+
+
+    private IEnumerator HandleTrapEncounter(RPSUnit attacker, RPSUnit trap, Vector2Int targetPos)
+{
+    // Show trap animation
+    if (FightAnimationManager.Instance != null)
+    {
+        FightAnimationManager.Instance.fightPanel?.SetActive(true);
+        FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+        FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+        yield return null;
+
+        // Update weapon display for trap encounter
+        // Always show from player's perspective (player vs trap)
+        bool isPlayerUnit = attacker.playerId == 1;
+        if (isPlayerUnit)
+        {
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, trap.role);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, trap.role);
+        }
+        else
+        {
+            // AI unit hitting trap - show AI unit vs trap
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(trap.role, attacker.Kind);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(trap.role, attacker.Kind);
+        }
+        
+        // Show trap result (whoever steps on trap loses)
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowTrapResult(isPlayerUnit));
+    }
+
+    // עדכון ה-AI הקשה על דמות שהושמדה
+    var hardAI = FindObjectOfType<AIPlayerHardController>();
+    if (hardAI != null)
+    {
+        hardAI.OnUnitDestroyed(attacker);
+    }
+
+    BoardManager.Instance.RemoveUnit(attacker);
+    Destroy(attacker.gameObject);
+    TurnManager.Instance?.EndTurn();
+}
+
+
+private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int targetPos)
+{
+    // Show flag capture animation
+    if (FightAnimationManager.Instance != null)
+    {
+        FightAnimationManager.Instance.fightPanel?.SetActive(true);
+        FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+        FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+        yield return null;
+
+        // Update weapon display for flag capture
+        bool isPlayerUnit = attacker.playerId == 1;
+        if (isPlayerUnit)
+        {
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, flag.role);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, flag.role);
+        }
+        else
+        {
+            // AI capturing flag
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(flag.role, attacker.Kind);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(flag.role, attacker.Kind);
+        }
+        
+        // Show flag capture result
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFlagCaptureResult(isPlayerUnit));
+    }
+
+    // עדכון ה-AI הקשה על דגל שהושמד
+    var hardAI = FindObjectOfType<AIPlayerHardController>();
+    if (hardAI != null)
+    {
+        hardAI.OnUnitDestroyed(flag);
+    }
+
+    BoardManager.Instance.RemoveUnit(flag);
+    Destroy(flag.gameObject);
+    attacker.MoveTo(targetPos);
+    BoardManager.Instance.PlaceUnit(attacker, targetPos);
+
+    PlayerController.gameEnded = true;
+
+    // Set winner based on who captured the flag
+    bool playerWon = attacker.playerId == 1;
+    TurnTimerManager.Instance?.SetPlayerWon(playerWon);
+
+    // Stop all game systems
+    TurnManager.Instance?.StopGame();
+}
+
+
+     protected IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int target)
     {
          if (FightAnimationManager.Instance != null)
         {
@@ -394,6 +494,7 @@ public class AIPlayerController : MonoBehaviour
 
         TurnManager.Instance?.EndTurn();
     }
+    
 
 }
 

@@ -2043,6 +2043,8 @@ MonoBehaviour:
   rockSprite: {fileID: -1203330386, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
   paperSprite: {fileID: 2105449755, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
   scissorsSprite: {fileID: -814062723, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
+  trapSprite: {fileID: 772844261, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
+  flagSprite: {fileID: -852258605, guid: 4988109d7ac1fc444b4d99dcd09409b4, type: 3}
   playerWeaponDisplay: {fileID: 1556715464}
   enemyWeaponDisplay: {fileID: 470766690}
 --- !u!4 &845394618

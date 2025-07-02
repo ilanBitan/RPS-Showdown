@@ -20,6 +20,8 @@ public class PvPMoveLogger : MonoBehaviour
     private DatabaseReference roomRef;
     private bool isListening = false;
     private string lastProcessedMove = "";
+    private RPSUnit.RPSKind? lastTieChoice;
+
 
     // Battle state tracking
     private bool isInBattle = false;
@@ -185,125 +187,53 @@ public class PvPMoveLogger : MonoBehaviour
 
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
-            StartCoroutine(ApplyBattleResult(battleResultData));
-        });
-    }
+            
+             if(!isBattleInitiator)
+            {
+if (battleResultData.ContainsKey("tieRestart"))
+{
+    UnityEngine.Debug.Log("[PvPMoveLogger] Tie restart received - updating units with tieChoice!");
 
-    /// <summary>
-    /// Apply battle result received from server
-    /// </summary>
-    private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultData)
+    if (battleResultData.ContainsKey("tieChoice"))
     {
-        if (!battleResultData.ContainsKey("winner") || !battleResultData.ContainsKey("hostChoice") || !battleResultData.ContainsKey("guestChoice"))
-        {
-            UnityEngine.Debug.LogError("[PvPMoveLogger] Invalid battle result data");
-            yield break;
-        }
+        string tieChoiceStr = battleResultData["tieChoice"].ToString();
+        RPSUnit.RPSKind tieChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), tieChoiceStr);
 
-        string winner = battleResultData["winner"].ToString();
-        string hostChoiceStr = battleResultData["hostChoice"].ToString();
-        string guestChoiceStr = battleResultData["guestChoice"].ToString();
-
-        RPSUnit.RPSKind hostChoice;
-        RPSUnit.RPSKind guestChoice;
-
-        try
-        {
-            hostChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), hostChoiceStr);
-            guestChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), guestChoiceStr);
-        }
-        catch (Exception ex)
-        {
-            UnityEngine.Debug.LogError($"[PvPMoveLogger] Error parsing battle choices: {ex.Message}");
-            yield break;
-        }
-
-        string myPlayerType = isHost ? "host" : "guest";
-        bool iWon = winner == myPlayerType;
-
-        UnityEngine.Debug.Log($"[PvPMoveLogger] Applying battle result: Winner={winner}, HostChoice={hostChoice}, GuestChoice={guestChoice}, IWon={iWon}");
-        UnityEngine.Debug.Log($"[PvPMoveLogger] My player type: {myPlayerType}, Battle units: myUnit={myBattleUnit?.name}, opponentUnit={opponentBattleUnit?.name}");
-
-        // FIXED LOGIC: Now we know exactly which player made which choice
-        RPSUnit.RPSKind myActualChoice;
-        RPSUnit.RPSKind opponentActualChoice;
-
-        if (isHost)
-        {
-            // I am the host, so I made the host choice
-            myActualChoice = hostChoice;
-            opponentActualChoice = guestChoice;
-        }
-        else
-        {
-            // I am the guest, so I made the guest choice
-            myActualChoice = guestChoice;
-            opponentActualChoice = hostChoice;
-        }
-
-        UnityEngine.Debug.Log($"[PvPMoveLogger] Final choice assignment: My choice={myActualChoice}, Opponent choice={opponentActualChoice}");
-
-        // Update unit kinds and reveal them
-        myBattleUnit.Kind = myActualChoice;
-        opponentBattleUnit.Kind = opponentActualChoice;
+        myBattleUnit.Kind = tieChoice;
+        opponentBattleUnit.Kind = tieChoice;
 
         myBattleUnit.Reveal();
         opponentBattleUnit.Reveal();
         myBattleUnit.UpdateVisual();
         opponentBattleUnit.UpdateVisual();
-
-        yield return new WaitForSeconds(0.5f);
-
-        // Apply the battle outcome - the winner keeps their unit and moves to target
-        if (iWon)
-        {
-            UnityEngine.Debug.Log($"[PvPMoveLogger] You won the battle! {myActualChoice} beats {opponentActualChoice}. Your unit survives and moves.");
-            BoardManager.Instance.RemoveUnit(opponentBattleUnit);
-            Destroy(opponentBattleUnit.gameObject);
-            myBattleUnit.MoveTo(battleTargetPos);
-        }
-        else
-        {
-            UnityEngine.Debug.Log($"[PvPMoveLogger] You lost the battle! {opponentActualChoice} beats {myActualChoice}. Your unit is destroyed.");
-            BoardManager.Instance.RemoveUnit(myBattleUnit);
-            Destroy(myBattleUnit.gameObject);
-            opponentBattleUnit.MoveTo(battleTargetPos);
-        }
-
-        // Hide battle panel for both players
-        if (BattleManager.Instance != null)
-        {
-            BattleManager.Instance.battlePanel?.SetActive(false);
-        }
-
-        // Clean up battle state
-        isInBattle = false;
-        isBattleInitiator = false;
-        myBattleUnit = null;
-        opponentBattleUnit = null;
-        myBattleChoice = null;
-        opponentBattleChoice = null;
-
-        // Clear player selections
-        foreach (var controller in FindObjectsOfType<PlayerController>())
-        {
-            controller.ClearSelection();
-        }
-
-        // End turn for both players
-        if (TurnManager.Instance != null)
-        {
-            TurnManager.Instance.EndTurn();
-        }
-
-        // Ensure battle panel is hidden
-        if (BattleManager.Instance != null)
-        {
-            BattleManager.Instance.battlePanel?.SetActive(false);
-        }
-
-        UnityEngine.Debug.Log("[PvPMoveLogger] Battle ended and turn ended successfully");
     }
+    else
+    {
+        UnityEngine.Debug.LogError("[PvPMoveLogger] Tie restart but no tieChoice found!");
+    }
+
+    myBattleChoice = null;
+    opponentBattleChoice = null;
+
+    BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+    BattleManager.Instance.ShowPlayerPanel();
+    return;
+}
+
+
+
+
+
+            StartCoroutine(ApplyBattleResult(battleResultData));
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[PvPMoveLogger] Ignoring battle result - we are the initiator and will resolve it ourselves");
+            }
+        });
+    }
+
+ 
 
     /// <summary>
     /// Execute a small delay before performing opponent move
@@ -547,44 +477,27 @@ public class PvPMoveLogger : MonoBehaviour
         // Handle trap case
         if (targetUnit.role == RPSUnit.UnitRole.Trap)
         {
-            UnityEngine.Debug.Log(" Opponent stepped on trap and is destroyed.");
-            BoardManager.Instance.RemoveUnit(unit);
-            Destroy(unit.gameObject);
+            UnityEngine.Debug.Log("Opponent stepped on trap!");
+    yield return StartCoroutine(unit.HandleTrapEncounter(targetUnit));
 
-            // Synchronize turn after either player completed their move
-            if (unit.playerId == 2 && TurnManager.Instance != null)
-            {
-                // Since guest just moved, now it should be host's turn (player 1)
-                TurnManager.Instance.StartPlayerTurn();
-                UnityEngine.Debug.Log("[PvPMoveLogger] Guest stepped on trap - starting host's turn");
-            }
-            else if (unit.playerId == 1 && TurnManager.Instance != null)
-            {
-                // Since host just moved, now it should be guest's turn (player 2)
-                TurnManager.Instance.EndTurn();
-                UnityEngine.Debug.Log("[PvPMoveLogger] Host stepped on trap - starting guest's turn");
-            }
-            yield break;
+    // After trap, start next turn
+    if (unit.playerId == 2 && TurnManager.Instance != null)
+    {
+        TurnManager.Instance.StartPlayerTurn();
+    }
+    else if (unit.playerId == 1 && TurnManager.Instance != null)
+    {
+        TurnManager.Instance.EndTurn();
+    }
+    yield break;
         }
 
         // Handle flag case
         if (targetUnit.role == RPSUnit.UnitRole.Flag)
         {
-            UnityEngine.Debug.Log("Opponent captured the FLAG! YOU LOSE!");
-            BoardManager.Instance.RemoveUnit(targetUnit);
-            Destroy(targetUnit.gameObject);
-            unit.MoveTo(targetPos);
-            PlayerController.gameEnded = true;
-
-            // Set player as loser
-            TurnTimerManager.Instance?.SetPlayerWon(false);
-
-            // Note: PvP statistics are updated by PlayerController when flag is captured
-            // No need to update them here to avoid duplication
-
-            // Stop all game systems
-            TurnManager.Instance?.StopGame();
-            yield break;
+ UnityEngine.Debug.Log("Opponent captured the flag!");
+    yield return StartCoroutine(unit.HandleFlagCapture(targetUnit));
+    yield break;
         }
 
         // FIXED LOGIC: Handle simple battles vs tie battles correctly
@@ -593,66 +506,32 @@ public class PvPMoveLogger : MonoBehaviour
             // Tie battle - must go through battle system for player choices
             UnityEngine.Debug.Log($"[PvPMoveLogger] Tie battle detected - setting up battle system: {unit.Kind} vs {targetUnit.Kind}");
             SetupBattleState(targetUnit, unit, targetPos, false);
+            BattleManager.Instance?.SetUnits(targetUnit, unit); // Make sure you set the units!
+
             BattleManager.Instance?.ShowPlayerPanel();
         }
         else
         {
             // Simple battle - resolve immediately using same logic as RPSUnit.TryMove
             UnityEngine.Debug.Log($"[PvPMoveLogger] Simple battle detected - resolving immediately: {unit.Kind} vs {targetUnit.Kind}");
+// Simple battle - resolve using combat animation system
 
-            if (unit.Beats(targetUnit))
-            {
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] ✅ GUEST WINS! {unit.name} ({unit.Kind}, Player {unit.playerId}) BEATS {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Removing host unit: {targetUnit.name} (Player {targetUnit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Moving winning guest unit from {unit.Position} to {targetPos}");
+Vector2Int originalPosition = unit.Position;
+yield return StartCoroutine(unit.ExecuteCombatWithAnimation(unit, targetUnit, targetPos, originalPosition));
 
-                BoardManager.Instance.RemoveUnit(targetUnit);
-                Destroy(targetUnit.gameObject);
-                Vector2Int oldPos = unit.Position;
-                unit.MoveTo(targetPos);
+// Synchronize turn after guest (player 2) completed their move
+if (unit.playerId == 2 && TurnManager.Instance != null)
+{
+    TurnManager.Instance.StartPlayerTurn();
+    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest simple battle ended - starting host's turn");
+}
+else if (unit.playerId == 1 && TurnManager.Instance != null)
+{
+    TurnManager.Instance.EndTurn();
+    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Host simple battle ended - starting guest's turn");
+}
+yield break;
 
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Winner {unit.name} moved from {oldPos} to {unit.Position}");
-                yield return new WaitForSeconds(0.6f);
-
-                // Synchronize turn after guest (player 2) completed their move
-                if (unit.playerId == 2 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.StartPlayerTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest won battle - starting host's turn");
-                }
-                yield break;
-
-            }
-            else if (targetUnit.Beats(unit))
-            {
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] ❌ GUEST LOSES! {targetUnit.name} ({targetUnit.Kind}, Player {targetUnit.playerId}) BEATS {unit.name} ({unit.Kind}, Player {unit.playerId})");
-                UnityEngine.Debug.Log($"[GUEST BATTLE RESULT] Removing guest unit: {unit.name} (Player {unit.playerId})");
-                BoardManager.Instance.RemoveUnit(unit);
-                Destroy(unit.gameObject);
-
-
-                // Synchronize turn after guest (player 2) completed their move
-                if (unit.playerId == 2 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.EndTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest lost battle - starting host's turn");
-                }
-                if (unit.playerId == 1 && TurnManager.Instance != null)
-                {
-                    // Since guest just moved, now it should be host's turn (player 1)
-                    TurnManager.Instance.EndTurn();
-                    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest lost battle - starting host's turn");
-                }
-                yield break;
-
-            }
-            else
-            {
-                // This shouldn't happen for simple battles, but just in case
-                UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unexpected tie in simple battle: {unit.Kind} vs {targetUnit.Kind}");
-            }
 
             yield return new WaitForSeconds(0.5f);
         }
@@ -961,7 +840,7 @@ public class PvPMoveLogger : MonoBehaviour
                     await roomRef.Child("battleResult").SetValueAsync(battleResult);
 
                     // Apply result locally for initiator
-                    ApplyBattleResultLocally(iWin, myBattleUnit.Kind, opponentBattleUnit.Kind);
+                    StartCoroutine(ApplyBattleResultLocally(iWin, myBattleUnit.Kind, opponentBattleUnit.Kind));
 
                     // Wait a moment for opponent to receive the battle result
                     await Task.Delay(1000);
@@ -1009,7 +888,7 @@ public class PvPMoveLogger : MonoBehaviour
                     await roomRef.Child("battleResult").SetValueAsync(battleResult);
 
                     // Apply result locally for initiator
-                    ApplyBattleResultLocally(iWin, myBattleChoice.Value, opponentBattleChoice.Value);
+                    StartCoroutine(ApplyBattleResultLocally(iWin, myBattleChoice.Value, opponentBattleChoice.Value));
 
 
                     // Wait a moment for opponent to receive the battle result
@@ -1024,14 +903,42 @@ public class PvPMoveLogger : MonoBehaviour
                 else
                 {
                     // Tie - restart battle
-                    UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
-                    myBattleChoice = null;
-                    opponentBattleChoice = null;
+                    // Tie - restart battle
+UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
 
-                    // Clear battle choices on server
-                    await roomRef.Child("battleChoice").RemoveValueAsync();
+// Update real units with new choices so intro shows correct weapons
+if (myBattleChoice.HasValue && opponentBattleChoice.HasValue)
+{
+    myBattleUnit.Kind = myBattleChoice.Value;
+    opponentBattleUnit.Kind = opponentBattleChoice.Value;
 
-                    BattleManager.Instance?.ShowPlayerPanel();
+    myBattleUnit.Reveal();
+    opponentBattleUnit.Reveal();
+    myBattleUnit.UpdateVisual();
+    opponentBattleUnit.UpdateVisual();
+}
+
+// Clear battle choices on server
+await roomRef.Child("battleChoice").RemoveValueAsync();
+
+// 🔑 OPTIONAL: Write a tieRestart flag for the non-initiator (your logic for that looks fine)
+var tieRestartResult = new Dictionary<string, object>
+{
+    { "winner", null },
+    { "tieRestart", true },
+    { "tieChoice", myBattleChoice.Value.ToString() }
+};
+await roomRef.Child("battleResult").SetValueAsync(tieRestartResult);
+
+// Clear local choices so next input is fresh
+myBattleChoice = null;
+opponentBattleChoice = null;
+
+// Show next tie panel using the real updated units
+BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+BattleManager.Instance.ShowPlayerPanel();
+
+
                 }
             }
         }
@@ -1042,34 +949,8 @@ public class PvPMoveLogger : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Apply battle result locally
-    /// </summary>
-    private void ApplyBattleResultLocally(bool iWon, RPSUnit.RPSKind myChoice, RPSUnit.RPSKind opponentChoice)
-    {
-        // Reveal both units
-        myBattleUnit.Kind = myChoice;
-        opponentBattleUnit.Kind = opponentChoice;
-        myBattleUnit.Reveal();
-        opponentBattleUnit.Reveal();
-        myBattleUnit.UpdateVisual();
-        opponentBattleUnit.UpdateVisual();
 
-        if (iWon)
-        {
-            UnityEngine.Debug.Log($"[PvPMoveLogger] You win the battle! {myChoice} beats {opponentChoice}");
-            BoardManager.Instance.RemoveUnit(opponentBattleUnit);
-            Destroy(opponentBattleUnit.gameObject);
-            myBattleUnit.MoveTo(battleTargetPos);
-        }
-        else
-        {
-            UnityEngine.Debug.Log($"[PvPMoveLogger] You lose the battle! {opponentChoice} beats {myChoice}");
-            BoardManager.Instance.RemoveUnit(myBattleUnit);
-            Destroy(myBattleUnit.gameObject);
-            opponentBattleUnit.MoveTo(battleTargetPos);
-        }
-    }
+
 
     /// <summary>
     /// End the current battle and clean up
@@ -1244,4 +1125,177 @@ public class PvPMoveLogger : MonoBehaviour
     {
         StopListening();
     }
+
+private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultData)
+{
+    BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
+
+    if (!battleResultData.ContainsKey("winner") || !battleResultData.ContainsKey("hostChoice") || !battleResultData.ContainsKey("guestChoice"))
+    {
+        UnityEngine.Debug.LogError("[PvPMoveLogger] Invalid battle result data");
+        yield break;
+    }
+    string winner = battleResultData["winner"].ToString();
+    string hostChoiceStr = battleResultData["hostChoice"].ToString();
+    string guestChoiceStr = battleResultData["guestChoice"].ToString();
+
+
+
+    RPSUnit.RPSKind hostChoice;
+    RPSUnit.RPSKind guestChoice;
+
+    try
+    {
+        hostChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), hostChoiceStr);
+        guestChoice = (RPSUnit.RPSKind)Enum.Parse(typeof(RPSUnit.RPSKind), guestChoiceStr);
+    }
+    catch (Exception ex)
+    {
+        UnityEngine.Debug.LogError($"[PvPMoveLogger] Error parsing battle choices: {ex.Message}");
+        yield break;
+    }
+
+    string myPlayerType = isHost ? "host" : "guest";
+    bool iWon = winner == myPlayerType;
+
+    UnityEngine.Debug.Log($"[PvPMoveLogger] Applying battle result: Winner={winner}, HostChoice={hostChoice}, GuestChoice={guestChoice}, IWon={iWon}");
+    UnityEngine.Debug.Log($"[PvPMoveLogger] My player type: {myPlayerType}, Battle units: myUnit={myBattleUnit?.name}, opponentUnit={opponentBattleUnit?.name}");
+
+    // FIXED LOGIC: Now we know exactly which player made which choice
+    RPSUnit.RPSKind myActualChoice;
+    RPSUnit.RPSKind opponentActualChoice;
+
+    if (isHost)
+    {
+        // I am the host, so I made the host choice
+        myActualChoice = hostChoice;
+        opponentActualChoice = guestChoice;
+    }
+    else
+    {
+        // I am the guest, so I made the guest choice
+        myActualChoice = guestChoice;
+        opponentActualChoice = hostChoice;
+    }
+
+    UnityEngine.Debug.Log($"[PvPMoveLogger] Final choice assignment: My choice={myActualChoice}, Opponent choice={opponentActualChoice}");
+
+    // Update unit kinds and reveal them
+    myBattleUnit.Kind = myActualChoice;
+    opponentBattleUnit.Kind = opponentActualChoice;
+
+    myBattleUnit.Reveal();
+    opponentBattleUnit.Reveal();
+    myBattleUnit.UpdateVisual();
+    opponentBattleUnit.UpdateVisual();
+
+    yield return new WaitForSeconds(0.5f);
+
+    // Apply the battle outcome - the winner keeps their unit and moves to target
+    if (iWon)
+    {
+        UnityEngine.Debug.Log($"[PvPMoveLogger] You won the battle! {myActualChoice} beats {opponentActualChoice}. Your unit survives and moves.");
+        BoardManager.Instance.RemoveUnit(opponentBattleUnit);
+        Destroy(opponentBattleUnit.gameObject);
+        myBattleUnit.MoveTo(battleTargetPos);
+    }
+    else
+    {
+        UnityEngine.Debug.Log($"[PvPMoveLogger] You lost the battle! {opponentActualChoice} beats {myActualChoice}. Your unit is destroyed.");
+        BoardManager.Instance.RemoveUnit(myBattleUnit);
+        Destroy(myBattleUnit.gameObject);
+        opponentBattleUnit.MoveTo(battleTargetPos);
+    }
+
+    // Update the fight display sprites through animation manager - ensure host is always on left
+    if (isHost)
+    {
+        // I am host, so I'm on the left, opponent (guest) on the right
+        FightAnimationManager.Instance?.UpdateFightDisplaySprites(myActualChoice, opponentActualChoice);
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(iWon, !iWon));
+    }
+    else
+    {
+        // I am guest, so host should be on left, I should be on right
+        FightAnimationManager.Instance?.UpdateFightDisplaySprites(opponentActualChoice, myActualChoice);
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(!iWon, iWon));
+    }
+
+    // Hide battle panel for both players
+    if (BattleManager.Instance != null)
+    {
+        BattleManager.Instance.battlePanel?.SetActive(false);
+    }
+
+    // Clean up battle state
+    isInBattle = false;
+    isBattleInitiator = false;
+    myBattleUnit = null;
+    opponentBattleUnit = null;
+    myBattleChoice = null;
+    opponentBattleChoice = null;
+
+    // Clear player selections
+    foreach (var controller in FindObjectsOfType<PlayerController>())
+    {
+        controller.ClearSelection();
+    }
+
+    // End turn for both players
+    if (TurnManager.Instance != null)
+    {
+        TurnManager.Instance.EndTurn();
+    }
+
+    // Ensure battle panel is hidden
+    if (BattleManager.Instance != null)
+    {
+        BattleManager.Instance.battlePanel?.SetActive(false);
+    }
+
+    UnityEngine.Debug.Log("[PvPMoveLogger] Battle ended and turn ended successfully");
+}
+
+/// <summary>
+/// Apply battle result locally
+/// </summary>
+private IEnumerator ApplyBattleResultLocally(bool iWon, RPSUnit.RPSKind myChoice, RPSUnit.RPSKind opponentChoice)
+{
+    // Reveal both units
+    myBattleUnit.Kind = myChoice;
+    opponentBattleUnit.Kind = opponentChoice;
+    myBattleUnit.Reveal();
+    opponentBattleUnit.Reveal();
+    myBattleUnit.UpdateVisual();
+    opponentBattleUnit.UpdateVisual();
+
+    if (iWon)
+    {
+        UnityEngine.Debug.Log($"[PvPMoveLogger] You win the battle! {myChoice} beats {opponentChoice}");
+        BoardManager.Instance.RemoveUnit(opponentBattleUnit);
+        Destroy(opponentBattleUnit.gameObject);
+        myBattleUnit.MoveTo(battleTargetPos);
+    }
+    else
+    {
+        UnityEngine.Debug.Log($"[PvPMoveLogger] You lose the battle! {opponentChoice} beats {myChoice}");
+        BoardManager.Instance.RemoveUnit(myBattleUnit);
+        Destroy(myBattleUnit.gameObject);
+        opponentBattleUnit.MoveTo(battleTargetPos);
+    }
+
+    // Update the fight display sprites through animation manager - ensure host is always on left
+    if (isHost)
+    {
+        // I am host, so I'm on the left, opponent (guest) on the right
+        FightAnimationManager.Instance?.UpdateFightDisplaySprites(myChoice, opponentChoice);
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(iWon, !iWon));
+    }
+    else
+    {
+        // I am guest, so host should be on left, I should be on right
+        FightAnimationManager.Instance?.UpdateFightDisplaySprites(opponentChoice, myChoice);
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(!iWon, iWon));
+    }
+}
 }

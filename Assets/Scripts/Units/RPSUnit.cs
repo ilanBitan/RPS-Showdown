@@ -236,136 +236,211 @@ public class RPSUnit : Unit
     }
 
     public bool TryMove(Vector2Int direction)
+{
+    // Add check for movable units
+    if (!IsMovable())
     {
-                // Add check for movable units
-        if (!IsMovable())
-        {
-            UnityEngine.Debug.Log($"🚫 {role} units cannot move!");
-            return false;
-        }
-        Vector2Int targetPos = Position + direction;
+        UnityEngine.Debug.Log($"🚫 {role} units cannot move!");
+        return false;
+    }
+    Vector2Int targetPos = Position + direction;
 
-        if (!BoardManager.Instance.IsInsideBoard(targetPos))
-        {
-            UnityEngine.Debug.Log($"⛔ Move is out of board bounds");
-            return false;
-        }
-
-        // Store original position for logging
-        Vector2Int originalPosition = Position;
-
-        Unit target = BoardManager.Instance.GetUnitAt(targetPos);
-
-        if (target != null)
-        {
-            if (target.playerId == playerId)
-            {
-                UnityEngine.Debug.Log("🚫 Cell is occupied by your own unit");
-                return false;
-            }
-
-            RPSUnit enemy = target as RPSUnit;
-            if (enemy == null)
-            {
-                UnityEngine.Debug.Log("❌ Target is not a valid RPS unit");
-                return false;
-            }
-
-            this.Reveal();
-            enemy.Reveal();
-
-            if (enemy.role == UnitRole.Trap)
-            {
-                UnityEngine.Debug.Log("💥 Trap triggered! Unit destroyed.");
-
-                // Log move for PvP before destruction
-                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
-                {
-                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
-                }
-
-                                // עדכון ה-AI הקשה על דמות שהושמדה
-                var hardAI = FindObjectOfType<AIPlayerHardController>();
-                if (hardAI != null)
-                {
-                    hardAI.OnUnitDestroyed(this);
-                }
-                BoardManager.Instance.RemoveUnit(this);
-                StartCoroutine(PlayJumpAndRemove(this.gameObject));
-                 return false;
-            }
-
-            if (enemy.role == UnitRole.Flag)
-            {
-                UnityEngine.Debug.Log("🎯 Flag captured!");
-                                // עדכון ה-AI הקשה על דגל שהושמד
-                var hardAI = FindObjectOfType<AIPlayerHardController>();
-                if (hardAI != null)
-                {
-                    hardAI.OnUnitDestroyed(enemy);
-                }
-                BoardManager.Instance.RemoveUnit(enemy);
-                Destroy(enemy.gameObject);
-                MoveTo(targetPos);
-                BoardManager.Instance.PlaceUnit(this, targetPos);
-
-                // Log move for PvP
-                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
-                {
-                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
-                }
-                            PlayerController.gameEnded = true;
-            
-            // Set player as loser
-            TurnTimerManager.Instance?.SetPlayerWon(true);
-            
-            // Stop all game systems
-            TurnManager.Instance?.StopGame();
-            return true;
-                
-
-            }
-
-            // Battle logic
-            if (this.Kind == enemy.Kind)
-            {
-                UnityEngine.Debug.Log("⚔️ Same type battle!");
-
-                // Log move for PvP before battle
-                if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
-                {
-                    PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
-                }
-
-                BattleManager.Instance?.StartBattle(this, enemy, targetPos);
-                return true;
-            }
-
-
-
-            StartCoroutine(ExecuteCombatWithAnimation(this, enemy, targetPos, originalPosition));
-            return false;
-        }
-
-        // Empty space movement
-        MoveTo(targetPos);
-        BoardManager.Instance.PlaceUnit(this, targetPos);
-
-        // Log move for PvP
-        if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
-        {
-            PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
-        }
-
-        return true;
+    if (!BoardManager.Instance.IsInsideBoard(targetPos))
+    {
+        UnityEngine.Debug.Log($"⛔ Move is out of board bounds");
+        return false;
     }
 
+    // Store original position for logging
+    Vector2Int originalPosition = Position;
+
+    Unit target = BoardManager.Instance.GetUnitAt(targetPos);
+
+    if (target != null)
+    {
+        if (target.playerId == playerId)
+        {
+            UnityEngine.Debug.Log("🚫 Cell is occupied by your own unit");
+            return false;
+        }
+
+        RPSUnit enemy = target as RPSUnit;
+        if (enemy == null)
+        {
+            UnityEngine.Debug.Log("❌ Target is not a valid RPS unit");
+            return false;
+        }
+
+        this.Reveal();
+        enemy.Reveal();
+
+        if (enemy.role == UnitRole.Trap)
+        {
+            UnityEngine.Debug.Log("💥 Trap triggered! Unit destroyed.");
+
+            // Log move for PvP before destruction
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
+
+            // Show trap animation
+            StartCoroutine(HandleTrapEncounter(this, enemy, targetPos));
+            return false;
+        }
+
+        if (enemy.role == UnitRole.Flag)
+        {
+            UnityEngine.Debug.Log("🎯 Flag captured!");
+
+            // Log move for PvP
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
+
+            // Show flag capture animation
+            StartCoroutine(HandleFlagCapture(this, enemy, targetPos));
+            return true;
+        }
+
+        // Battle logic
+        if (this.Kind == enemy.Kind)
+        {
+            UnityEngine.Debug.Log("⚔️ Same type battle!");
+
+            // Log move for PvP before battle
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            {
+                PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+            }
+
+            BattleManager.Instance?.StartBattle(this, enemy, targetPos);
+            return true;
+        }
+
+        StartCoroutine(ExecuteCombatWithAnimation(this, enemy, targetPos, originalPosition));
+        return false;
+    }
+
+    // Empty space movement
+    MoveTo(targetPos);
+    BoardManager.Instance.PlaceUnit(this, targetPos);
+
+    // Log move for PvP
+    if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+    {
+        PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
+    }
+
+    return true;
+}
+
+// New method to handle trap encounters with animation
+private IEnumerator HandleTrapEncounter(RPSUnit attacker, RPSUnit trap, Vector2Int targetPos)
+{
+    // Show trap animation
+    if (FightAnimationManager.Instance != null)
+    {
+        FightAnimationManager.Instance.fightPanel?.SetActive(true);
+        FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+        FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+        yield return null;
+
+        // Update weapon display for trap encounter
+        // Always show from player's perspective (player vs trap)
+        bool isPlayerUnit = attacker.playerId == 1;
+        if (isPlayerUnit)
+        {
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, trap.role);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, trap.role);
+        }
+        else
+        {
+            // AI unit hitting trap - show AI unit vs trap
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(trap.role, attacker.Kind);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(trap.role, attacker.Kind);
+        }
+        
+        // Show trap result (whoever steps on trap loses)
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowTrapResult(isPlayerUnit));
+    }
+
+    // עדכון ה-AI הקשה על דמות שהושמדה
+    var hardAI = FindObjectOfType<AIPlayerHardController>();
+    if (hardAI != null)
+    {
+        hardAI.OnUnitDestroyed(attacker);
+    }
+
+    BoardManager.Instance.RemoveUnit(attacker);
+    StartCoroutine(PlayJumpAndRemove(attacker.gameObject));
+}
+
+// New method to handle flag capture with animation
+private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int targetPos)
+{
+    // Show flag capture animation
+    if (FightAnimationManager.Instance != null)
+    {
+        FightAnimationManager.Instance.fightPanel?.SetActive(true);
+        FightAnimationManager.Instance.fightPlayer?.SetActive(true);
+        FightAnimationManager.Instance.fightEnemy?.SetActive(true);
+        yield return null;
+
+        // Update weapon display for flag capture
+        bool isPlayerUnit = attacker.playerId == 1;
+        if (isPlayerUnit)
+        {
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(attacker.Kind, flag.role);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, flag.role);
+        }
+        else
+        {
+            // AI capturing flag
+            FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(flag.role, attacker.Kind);
+            FightAnimationManager.Instance.UpdateFightDisplaySprites(flag.role, attacker.Kind);
+        }
+        
+        // Show flag capture result
+        yield return StartCoroutine(FightAnimationManager.Instance.ShowFlagCaptureResult(isPlayerUnit));
+    }
+
+    // עדכון ה-AI הקשה על דגל שהושמד
+    var hardAI = FindObjectOfType<AIPlayerHardController>();
+    if (hardAI != null)
+    {
+        hardAI.OnUnitDestroyed(flag);
+    }
+
+    BoardManager.Instance.RemoveUnit(flag);
+    Destroy(flag.gameObject);
+    MoveTo(targetPos);
+    BoardManager.Instance.PlaceUnit(this, targetPos);
+
+    PlayerController.gameEnded = true;
+
+    // Set winner based on who captured the flag
+    bool playerWon = attacker.playerId == 1;
+    TurnTimerManager.Instance?.SetPlayerWon(playerWon);
+
+    // Stop all game systems
+    TurnManager.Instance?.StopGame();
+}
 
 
+public IEnumerator HandleTrapEncounter(RPSUnit trapUnit)
+{
+    yield return StartCoroutine(HandleTrapEncounter(this, trapUnit, trapUnit.Position));
+}
 
+public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
+{
+    yield return StartCoroutine(HandleFlagCapture(this, flagUnit, flagUnit.Position));
+}
 
     
-        private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
+        public IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
     {
         UnityEngine.Debug.Log($"🔥 im from rpsunit {attacker.name} is attacking {defender.name}");
         if (FightAnimationManager.Instance != null)
