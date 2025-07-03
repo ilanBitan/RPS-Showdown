@@ -1,0 +1,107 @@
+[33m539d6fc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Merge branch 'main' of https://github.com/ilanBitan/RPS-Showdown
+[33me3fd31d[m not seeing trap in ai
+[33m58601d8[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Recreated the 'error' UI element in LoginScene based on its configuration from the previous commit
+[33m7838e1b[m UI improvement: added transparent panel for closing level popup on background click, adjusted hierarchy, and performed sanity cleanup (removed unused buttons, texts, and minor UI elements)
+[33mbfbeeba[m fix movement jump
+[33mb8e5cfb[m Apply tweaks after merging my-battle-fix
+[33m5df8a31[m Merge branch 'my-battle-fix'
+[33m37374f9[m[33m ([m[1;31morigin/my-battle-fix[m[33m, [m[1;32mmy-battle-fix[m[33m)[m all animation fixed in pvp:)
+[33mf58ad98[m Fix tie animation, tie after tie intro animation will come later
+[33mb1bf362[m fix: allow forfeit without loss after game ended (PlayerController.gameEnded)
+[33m4cea7cd[m fix: Play Again button now shows turn info and is only clickable at game end
+[33mf8bb276[m added intro animation to pvp battle tie
+[33m017fceb[m animation complete in ai, animation in simple battle added in pvp
+[33md9d1239[m Merge pull request #12 from ilanBitan/improve-pvp
+[33m5b9e2c5[m Merge branch 'my-battle-fix' of https://github.com/ilanBitan/RPS-Showdown into my-battle-fix
+[33m4177b5a[m Fix pvp fight
+[33m73863a1[m[33m ([m[1;31morigin/improve-pvp[m[33m)[m fix turns, id of room
+[33m728b20f[m fix server issue
+[33m5b102c7[m[33m ([m[1;32mtemp-changes[m[33m)[m Fix issues
+[33mf06e474[m[33m ([m[1;31morigin/temp-changes[m[33m)[m Fixing login fade and winning
+[33md535d47[m Fixing rare animation bug in medium AI combat sequence
+[33m29185f8[m Temporary commit: work in progress
+[33m5bd1667[m[33m ([m[1;31morigin/fix-last-things[m[33m)[m Merge pull request #11 from ilanBitan/fix-PVP-bugs
+[33mc3a8dce[m[33m ([m[1;31morigin/fix-PVP-bugs[m[33m, [m[1;32mfix-PVP-bugs[m[33m)[m Merge branch 'my-battle-fix' into fix-PVP-bugs
+[33m42d745c[m[33m ([m[1;31morigin/save-pvp[m[33m)[m fix main bug
+[33me37f07f[m updated code and gamescenes of hodaya and ilan changes'
+[33mbf1ab9c[m Merge remote-tracking branch 'remotes/origin/animations-from-multiple-users' into my-battle-fix
+[33m03ceba6[m Update my-battle-fix with latest changes from ai
+[33m816eab7[m Merge branch 'player_animation' into merged-logic-and-animation
+[33m176d386[m changes to suit Ilan changes
+[33m57fc8da[m add score in the server and fix turn
+[33mefff2f8[m Add forfeit popup functionality and hard level AI improvements - Added ForfeitManager with popup UI - Enhanced hard AI with better strategic decision making - Updated battle flow with forfeit option - Improved AI difficulty scaling - Added forfeit button assets and background
+[33mc02ec70[m[33m ([m[1;32mmy-battle-fix-backup[m[33m)[m battle completed
+[33m48ca9b3[m fix one line
+[33mcefe1b0[m Merge pull request #8 from ilanBitan/PvP-BattleFix
+[33m9388d0f[m[33m ([m[1;31morigin/PvP-BattleFix[m[33m)[m Merge branch 'my-battle-fix' into PvP-BattleFix
+[33mf04150d[m proggress in all fight
+[33m454493d[m fix turns
+[33m59dc4d7[m proggress in tie
+[33m166e5e0[m Fix PvP battle logic and timer desync
+[33mdf9c067[m[33m ([m[1;31morigin/pvp[m[33m, [m[1;32mPvP-BattleFix[m[33m, [m[1;32mPvP[m[33m)[m battle logic in pvp fixed, still kinda messy
+[33m1aa192e[m synchronyc 2 screens
+[33m79ba504[m changes in firebase
+[33m819f6f7[m update changes
+[33md3c42fc[m[33m ([m[1;31morigin/animations-from-multiple-users[m[33m, [m[1;32mmerged-animations-fix[m[33m, [m[1;32manimations-from-multiple-users[m[33m)[m finished fighting animation vs AI
+[33madf7854[m animation for simple battle
+[33m63dd463[m updated animation improvements
+[33mf050ca2[m Add animation progress so it wont be fried
+[33m57c8c3a[m fix some bugs
+[33mee19b5e[m animation improvements+ touching bug fixed
+[33m323c346[m tie-battle animation logic fixed
+[33m2654a10[m tie-battle animation logic completed
+[33m2551783[m minor improvements, my computer is on fire
+[33meb4e038[m WIP: battle logic and fight animation setup
+[33m652895d[m players have the same board
+[33mf268386[m fix the bug, start to work on pvp
+[33m87acecb[m try to fix the bug
+[33mf2faacb[m Merge pull request #7 from ilanBitan/animations-from-multiple-users
+[33ma6f772c[m Add front enhantments improvements
+[33mc10c774[m[33m ([m[1;31morigin/multiple-users[m[33m, [m[1;32mmultiple-users[m[33m)[m Fix AI diagonal movement and improve movement validation
+[33me867769[m fix things right
+[33m7e2ae16[m both users connect to the room and start the game
+[33mcbbb252[m add room panel
+[33mc922844[m Merge branch 'multiple-users' of https://github.com/ilanBitan/RPS-Showdown into multiple-users
+[33m5e34876[m reset paswwors panel
+[33m295f4ed[m Merge pull request #6 from ilanBitan/firebase-with-logic-edits
+[33m96317a2[m[33m ([m[1;31morigin/reset-password[m[33m)[m Set up the PVP environment so Hadar can continue working
+[33m9b0f9fe[m[33m ([m[1;31morigin/firebase-with-logic-edits[m[33m, [m[1;32mfirebase-with-logic-edits[m[33m)[m Show all weapons of own soldiers at all times+ touch ups
+[33m3211137[m Show all weapons of own soldiers at all times
+[33ma198036[m create reset password panel
+[33m3deee0f[m Merge branch 'firebase-with-logic-edits' of https://github.com/ilanBitan/RPS-Showdown into firebase-with-logic-edits
+[33m887bdef[m[33m ([m[1;32mlogic-merge-no-scene[m[33m)[m Fix: Player jump logic and updated project settings
+[33mabb6905[m[33m ([m[1;32mmerged-firebase-logic-final[m[33m, [m[1;32mfirebase-final-integration[m[33m)[m Updated screens
+[33m4b6a2f4[m Merge branch 'merged-logic-and-animation' into firebase-with-logic-edits
+[33m80e59f9[m[33m ([m[1;32mmerged-logic-and-animation[m[33m, [m[1;32mkeep-assets-merge[m[33m)[m update clothes and board
+[33mb9dbfdb[m[33m ([m[1;32mfirebase-with-logic-prep[m[33m, [m[1;32mfirebase-integration-base[m[33m)[m create hard level
+[33m2a97187[m few more changes
+[33mc12cf1d[m Merge pull request #4 from ilanBitan/organize-files
+[33ma9033aa[m[33m ([m[1;31morigin/organize-files[m[33m)[m Merge branch 'firebase-integration-base' into organize-files
+[33m3566bab[m try to merge
+[33mdefa06c[m organize clean files
+[33m44f8189[m add score to winner
+[33m8d6af27[m fetch from the server
+[33maa99086[m[33m ([m[1;31morigin/my-clone-branch[m[33m)[m add some beauty things
+[33m247acab[m ad initial score to signUp
+[33m738c372[m Merge pull request #3 from ilanBitan/create-server
+[33md51ccf3[m Merge branch 'my-clone-branch' into create-server
+[33m81c4c8b[m[33m ([m[1;31morigin/medium-level-work[m[33m)[m 💾 Backup before moving from UI to 2D sprites
+[33m08f6e35[m Saving medium level work before switching
+[33m0f64025[m[33m ([m[1;31morigin/merged-logic-and-animation[m[33m)[m Add UnitVisualController and update RPSUnit for sprite-based visuals
+[33m987f7a8[m WIP: Saving progress before switching branches
+[33m6479abb[m Update .gitignore to exclude heavy Firebase files
+[33m9009fcf[m[33m ([m[1;31morigin/player_animation[m[33m, [m[1;32mplayer_animation[m[33m)[m addition of character weapons
+[33m6fbc67a[m[33m ([m[1;31morigin/feature/logic-improvements[m[33m, [m[1;32mfeature/logic-improvements[m[33m)[m First commit for logic improvements
+[33mad6ba3f[m Removed heavy Firebase files from the repo and added them to .gitignore
+[33m285a4c0[m Add large files to Git LFS
+[33ma93d1e0[m add login and signup options
+[33m31c6bb4[m visable temporary text (R/P/S)+ smooth movement animation+ jumping
+[33md0b7d8c[m idle animations_2
+[33m5c6078a[m idle animations
+[33m12e81ec[m[33m ([m[1;31morigin/create-server[m[33m)[m Added turn timer logic that starts only after setup phase (F & T selected)
+[33m4c80d38[m 🛠 Fix GitHub language detection to C#
+[33m7f88594[m Build basic RPS game logic: player turns, movement, and battle system
+[33m3889210[m Initial working version of RPS unit placement and selection logic
+[33m047fb06[m Set up board with tiles and layout, ready for further development.
+[33m1307422[m Created basic main menu UI with scene transitions
+[33m8184642[m Initial commit
