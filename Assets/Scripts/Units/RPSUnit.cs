@@ -115,6 +115,9 @@ public class RPSUnit : Unit
 
     public void Reveal()
     {
+        if (role == UnitRole.Trap)
+            return;
+
         isRevealed = true;
         UpdateVisual();
         UnityEngine.Debug.Log($"📣 {name} Revealed → {GetLetter()}");

@@ -469,36 +469,35 @@ if (battleResultData.ContainsKey("tieRestart"))
 
         UnityEngine.Debug.Log($"[PvPMoveLogger] Battle: {unit.name}({unit.Kind}) vs {targetUnit.name}({targetUnit.Kind})");
 
-        // Reveal units in battle
-        unit.Reveal();
-        targetUnit.Reveal();
-
-
         // Handle trap case
         if (targetUnit.role == RPSUnit.UnitRole.Trap)
         {
             UnityEngine.Debug.Log("Opponent stepped on trap!");
-    yield return StartCoroutine(unit.HandleTrapEncounter(targetUnit));
+            yield return StartCoroutine(unit.HandleTrapEncounter(targetUnit));
 
-    // After trap, start next turn
-    if (unit.playerId == 2 && TurnManager.Instance != null)
-    {
-        TurnManager.Instance.StartPlayerTurn();
-    }
-    else if (unit.playerId == 1 && TurnManager.Instance != null)
-    {
-        TurnManager.Instance.EndTurn();
-    }
-    yield break;
+            // After trap, start next turn
+            if (unit.playerId == 2 && TurnManager.Instance != null)
+            {
+                TurnManager.Instance.StartPlayerTurn();
+            }
+            else if (unit.playerId == 1 && TurnManager.Instance != null)
+            {
+                TurnManager.Instance.EndTurn();
+            }
+            yield break;
         }
 
         // Handle flag case
         if (targetUnit.role == RPSUnit.UnitRole.Flag)
         {
- UnityEngine.Debug.Log("Opponent captured the flag!");
-    yield return StartCoroutine(unit.HandleFlagCapture(targetUnit));
-    yield break;
+            UnityEngine.Debug.Log("Opponent captured the flag!");
+            yield return StartCoroutine(unit.HandleFlagCapture(targetUnit));
+            yield break;
         }
+
+        // Reveal units in battle (only for normal/tie battles, not trap/flag)
+        unit.Reveal();
+        targetUnit.Reveal();
 
         // FIXED LOGIC: Handle simple battles vs tie battles correctly
         if (unit.Kind == targetUnit.Kind)
