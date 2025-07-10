@@ -522,7 +522,7 @@ yield return StartCoroutine(unit.ExecuteCombatWithAnimation(unit, targetUnit, ta
 if (unit.playerId == 2 && TurnManager.Instance != null)
 {
     TurnManager.Instance.StartPlayerTurn();
-    UnityEngine.Debug.Log("[GUEST BATTLE RESULT] Guest simple battle ended - starting host's turn");
+    UnityEngine.Debug.Log("HADARRRRR- [GUEST BATTLE RESULT] Guest simple battle ended - starting host's turn");
 }
 else if (unit.playerId == 1 && TurnManager.Instance != null)
 {

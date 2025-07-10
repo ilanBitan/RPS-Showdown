@@ -211,7 +211,7 @@ public class PlayerController : MonoBehaviour
 
     void TryMoveUnit(RPSUnit unit, Vector2Int dir)
     {
-                // Add check for movable units
+        // Add check for movable units
         if (!unit.IsMovable())
         {
             UnityEngine.Debug.Log($"⛔ {unit.role} units cannot move!");
@@ -244,7 +244,7 @@ public class PlayerController : MonoBehaviour
                 {
                     UnityEngine.Debug.Log("🎯 You captured the enemy FLAG! YOU WIN!");
                     other.Reveal();
-                                        // עדכון ה-AI הקשה על דגל שהושמד
+                    // עדכון ה-AI הקשה על דגל שהושמד
                     var hardAI = FindObjectOfType<AIPlayerHardController>();
                     if (hardAI != null)
                     {
@@ -276,7 +276,7 @@ public class PlayerController : MonoBehaviour
                     UnityEngine.Debug.Log("💥 Trap triggered! Attacker destroyed.");
 
                     unit.Reveal();
-                                        
+
                     // עדכון ה-AI הקשה על דמות שהושמדה
                     var hardAI = FindObjectOfType<AIPlayerHardController>();
                     if (hardAI != null)
@@ -314,7 +314,7 @@ public class PlayerController : MonoBehaviour
                 unit.Reveal();
                 other.Reveal();
 
-             StartCoroutine(ExecuteCombatWithAnimation(unit, other, target, originalPosition));
+                StartCoroutine(ExecuteCombatWithAnimation(unit, other, target, originalPosition));
 
 
                 // Log move for PvP
@@ -324,7 +324,7 @@ public class PlayerController : MonoBehaviour
                 }
 
                 ClearSelection();
-                TurnManager.Instance?.EndTurn();
+                // EndTurn will be called at the end of ExecuteCombatWithAnimation
                 return;
             }
         }
@@ -341,7 +341,7 @@ public class PlayerController : MonoBehaviour
         ClearSelection();
         TurnManager.Instance?.EndTurn();
     }
- private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
+    private IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
     {
         if (FightAnimationManager.Instance != null)
         {
@@ -355,10 +355,10 @@ public class PlayerController : MonoBehaviour
             {
                 FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
             }
-            
+
             // הפעלת אנימציית הקרב
-           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
-  
+            // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
+
             // עדכון הספרייטים
             if (isPlayerAttacking)
             {
@@ -373,19 +373,19 @@ public class PlayerController : MonoBehaviour
         if (attacker.Beats(defender))
         {
             UnityEngine.Debug.Log($"✅ {attacker.name} wins – replacing {defender.name}");
-            
+
             // הצגת תוצאת הקרב
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = attacker.playerId == 1;
                 yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
             }
-                var hardAI = FindObjectOfType<AIPlayerHardController>();
-                if (hardAI != null)
-                {
-                    hardAI.OnUnitDestroyed(defender);
-                }
-            
+            var hardAI = FindObjectOfType<AIPlayerHardController>();
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(defender);
+            }
+
             BoardManager.Instance.RemoveUnit(defender);
             StartCoroutine(PlayJumpAndRemove(defender));
             MoveUnitTo(attacker, targetPos);
@@ -393,20 +393,20 @@ public class PlayerController : MonoBehaviour
         else if (defender.Beats(attacker))
         {
             UnityEngine.Debug.Log($"💀 {attacker.name} loses to {defender.name} and is destroyed");
-            
+
             // הצגת תוצאת הקרב
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = defender.playerId == 1;
                 yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, !playerWon));
-            }              
+            }
             var hardAI = FindObjectOfType<AIPlayerHardController>();
-                if (hardAI != null)
-                {
-                    hardAI.OnUnitDestroyed(attacker);
-                }
+            if (hardAI != null)
+            {
+                hardAI.OnUnitDestroyed(attacker);
+            }
 
-             if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
+            if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
             {
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
@@ -417,19 +417,22 @@ public class PlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log("❓ Unhandled combat case");
         }
+
+        // End turn after combat is resolved
+        TurnManager.Instance?.EndTurn();
     }
-       private IEnumerator PlayJumpAndRemove(RPSUnit unit, float delay = 0.5f)
-{
-    Animator anim = unit.GetComponent<Animator>();
-    if (anim != null)
+    private IEnumerator PlayJumpAndRemove(RPSUnit unit, float delay = 0.5f)
     {
-        anim.SetInteger("playerId", unit.playerId); // ✅ Correctly get player ID
-        anim.ResetTrigger("jump");
-        anim.SetTrigger("jump");
+        Animator anim = unit.GetComponent<Animator>();
+        if (anim != null)
+        {
+            anim.SetInteger("playerId", unit.playerId); // ✅ Correctly get player ID
+            anim.ResetTrigger("jump");
+            anim.SetTrigger("jump");
+        }
+        yield return new WaitForSeconds(delay);
+        Destroy(unit.gameObject);
     }
-    yield return new WaitForSeconds(delay);
-    Destroy(unit.gameObject);
-}
 
 
     void MoveUnitTo(RPSUnit unit, Vector2Int target)

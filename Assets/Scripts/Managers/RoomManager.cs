@@ -13,6 +13,7 @@ public class RoomManager : MonoBehaviour
     [SerializeField] private GameObject roomPanel;
     [SerializeField] private Button createRoomButton;
     [SerializeField] private Button joinRoomButton;
+    [SerializeField] private Button returnButton;
     [SerializeField] private TMP_InputField roomIdInput;
     [SerializeField] private TextMeshProUGUI roomIdText;
     [SerializeField] private TextMeshProUGUI statusText;
@@ -52,6 +53,7 @@ public class RoomManager : MonoBehaviour
         // Add button listeners
         createRoomButton.onClick.AddListener(CreateRoom);
         joinRoomButton.onClick.AddListener(JoinRoom);
+        returnButton.onClick.AddListener(ReturnToMainMenu);
     }
 
     public void ShowRoomPanel()
@@ -319,6 +321,37 @@ public class RoomManager : MonoBehaviour
         System.Random random = new System.Random();
         int roomNumber = random.Next(10000000, 99999999);
         return roomNumber.ToString();
+    }
+
+    private void ReturnToMainMenu()
+    {
+        // Clean up room data if we created one
+        if (isHost && !string.IsNullOrEmpty(currentRoomId))
+        {
+            // Remove the room from Firebase since host is leaving
+            roomsRef.Child(currentRoomId).RemoveValueAsync();
+        }
+
+        // Stop listening to room changes
+        if (isListening && !string.IsNullOrEmpty(currentRoomId))
+        {
+            roomsRef.Child(currentRoomId).ValueChanged -= HandleRoomValueChanged;
+            isListening = false;
+        }
+
+        // Reset room state
+        currentRoomId = "";
+        isHost = false;
+
+        // Clear UI
+        roomIdText.gameObject.SetActive(false);
+        roomIdInput.text = "";
+        statusText.text = "";
+
+        // Hide room panel
+        roomPanel.SetActive(false);
+
+        UnityEngine.Debug.Log("Returned to main menu from room panel");
     }
 
     private void OnDestroy()

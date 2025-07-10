@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using System.Diagnostics;
 
 public class TurnTimerManager : MonoBehaviour
 {
@@ -28,18 +29,18 @@ public class TurnTimerManager : MonoBehaviour
         if (playAgainButton == null && playAgainContainer != null)
         {
             playAgainButton = playAgainContainer.GetComponentInChildren<Button>();
-            Debug.Log($"[DEBUG] playAgainButton auto-assigned: {playAgainButton?.gameObject.name}");
+            UnityEngine.Debug.Log($"[DEBUG] playAgainButton auto-assigned: {playAgainButton?.gameObject.name}");
         }
         else
         {
-            Debug.Log($"[DEBUG] playAgainButton assigned in inspector: {playAgainButton?.gameObject.name}");
+            UnityEngine.Debug.Log($"[DEBUG] playAgainButton assigned in inspector: {playAgainButton?.gameObject.name}");
         }
 
         // Make sure the Play Again button is always visible but not interactable at start
         if (playAgainButton != null)
         {
             playAgainButton.interactable = false;
-            Debug.Log($"[DEBUG] playAgainButton.interactable = false (Awake)");
+            UnityEngine.Debug.Log($"[DEBUG] playAgainButton.interactable = false (Awake)");
         }
         if (playAgainContainer != null)
         {
@@ -215,18 +216,18 @@ public class TurnTimerManager : MonoBehaviour
             if (found != null)
             {
                 playAgainText = found.GetComponent<TMPro.TextMeshProUGUI>();
-                Debug.Log("[DEBUG] playAgainText was null, found and assigned dynamically!");
+                UnityEngine.Debug.Log("[DEBUG] playAgainText was null, found and assigned dynamically!");
             }
         }
         if (playAgainButton == null && playAgainContainer != null)
         {
             playAgainButton = playAgainContainer.GetComponentInChildren<Button>();
-            Debug.Log($"[DEBUG] playAgainButton was null, auto-assigned: {playAgainButton?.gameObject.name}");
+            UnityEngine.Debug.Log($"[DEBUG] playAgainButton was null, auto-assigned: {playAgainButton?.gameObject.name}");
         }
-        Debug.Log($"[DEBUG] UpdateTurnButtonText called. isPlayerTurn={isPlayerTurn}, isGameEnded={isGameEnded}");
+        UnityEngine.Debug.Log($"[DEBUG] UpdateTurnButtonText called. isPlayerTurn={isPlayerTurn}, isGameEnded={isGameEnded}");
         if (playAgainText == null)
         {
-            Debug.LogError("[DEBUG] playAgainText is STILL NULL after dynamic search!");
+            UnityEngine.Debug.LogError("[DEBUG] playAgainText is STILL NULL after dynamic search!");
             return;
         }
         if (isGameEnded)
@@ -236,19 +237,33 @@ public class TurnTimerManager : MonoBehaviour
             if (playAgainButton != null)
             {
                 playAgainButton.interactable = true;
-                Debug.Log("[DEBUG] playAgainButton.interactable = true (game ended)");
+                UnityEngine.Debug.Log("[DEBUG] playAgainButton.interactable = true (game ended)");
             }
         }
         else
         {
-            playAgainText.text = isPlayerTurn ? "YOUR TURN" : "ENEMY TURN";
+            // Check if this is a PvP game
+            bool isPvPMode = GameModeManager.Instance != null && GameModeManager.Instance.SelectedMode == GameMode.PvP;
+
+            if (isPvPMode)
+            {
+                // In PvP mode, show HOST TURN / GUEST TURN
+                bool isHostTurn = TurnManager.Instance != null && TurnManager.Instance.IsPlayerTurn(1);
+                playAgainText.text = isPlayerTurn ? "HOST TURN" : "GUEST TURN";
+            }
+            else
+            {
+                // In PvE mode, show YOUR TURN / ENEMY TURN
+                playAgainText.text = isPlayerTurn ? "YOUR TURN" : "ENEMY TURN";
+            }
+
             // Make button NOT interactable during the game
             if (playAgainButton != null)
             {
                 playAgainButton.interactable = false;
-                Debug.Log("[DEBUG] playAgainButton.interactable = false (game active)");
+                UnityEngine.Debug.Log("[DEBUG] playAgainButton.interactable = false (game active)");
             }
         }
-        Debug.Log($"[DEBUG] playAgainText.text set to: {playAgainText.text}");
+        UnityEngine.Debug.Log($"[DEBUG] playAgainText.text set to: {playAgainText.text}");
     }
 }
