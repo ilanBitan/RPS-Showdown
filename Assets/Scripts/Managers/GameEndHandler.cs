@@ -9,7 +9,7 @@ public class GameEndHandler : MonoBehaviour
     public Button playAgainButton;
     public TextMeshProUGUI victoryText;
 
-    public static bool gameEnded = false; // 💥 הוספנו נעילה כללית למשחק
+    public static bool gameEnded = false; // 💥 Indicates if the game has ended
 
     private void Start()
     {
@@ -17,11 +17,11 @@ public class GameEndHandler : MonoBehaviour
 
         if (playAgainButton != null)
         {
-            playAgainButton.interactable = false; // 🛑 לא לחיץ בהתחלה
+            playAgainButton.interactable = false; // 🛑 Cannot click at the start
             playAgainButton.onClick.AddListener(OnPlayAgainClicked);
         }
 
-        gameEnded = false; // 🛑 בתחילת סצנה אין ניצחון
+        gameEnded = false; // 🛑 At the start of the scene, not finished
     }
 
     public void ShowVictory(string winnerName)
@@ -31,7 +31,7 @@ public class GameEndHandler : MonoBehaviour
         if (playAgainButton != null)
             playAgainButton.interactable = true;
 
-        gameEnded = true; // 🔒 נעילת המשחק
+        gameEnded = true; // 🔒 End the game
     }
 
     private void OnPlayAgainClicked()

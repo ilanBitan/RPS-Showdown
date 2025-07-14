@@ -10,7 +10,7 @@ public class AIPlayerMediumController : AIPlayerController
     private Dictionary<Vector2Int, RPSUnit.RPSKind> revealedEnemies = new Dictionary<Vector2Int, RPSUnit.RPSKind>();
     private HashSet<Vector2Int> knownTraps = new HashSet<Vector2Int>();
 
-    // זיכרון של היחידה האחרונה ששיחקה
+    // Memory of the last unit that played
     private RPSUnit lastPlayedUnit = null;
 
     protected override IEnumerator PerformAIAction()
@@ -39,14 +39,14 @@ public class AIPlayerMediumController : AIPlayerController
 
         List<RPSUnit> enemyUnits = allUnits.Where(u => u.playerId == 1).ToList();
 
-        // עדכון מידע על יחידות שנחשפו
+        // Update information about revealed units
         foreach (var enemy in enemyUnits)
         {
             if (enemy.IsRevealed && !revealedEnemies.ContainsKey(enemy.Position))
                 revealedEnemies[enemy.Position] = enemy.Kind;
         }
 
-        // מציאת המהלך הטוב ביותר
+        // Find the best move
         var bestMove = FindBestMove(aiUnits, enemyUnits);
         
         if (bestMove.HasValue)
@@ -65,7 +65,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
 {
     var enemyUnit = BoardManager.Instance.GetUnitAt(target) as RPSUnit;
 
-    // בדיקה שהמהלך חוקי - רק צעד אחד
+    // Check that the move is legal - only one step
     Vector2Int delta = target - unit.Position;
     if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
     {
@@ -76,7 +76,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
 
     if (enemyUnit == null)
     {
-        // תזוזה למשבצת ריקה
+        // Move to empty cell
         Debug.Log($"🚶 {unit.name} moves to empty tile {target}");
         unit.MoveTo(target);
         yield return new WaitForSeconds(0.6f);
@@ -84,7 +84,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
         yield break;
     }
 
-    // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
+    // Ensure we're attacking only a unit that's exactly at the target position
     if (enemyUnit.Position != target)
     {
         Debug.Log($"🚫 Cannot attack: Target unit is at {enemyUnit.Position} but move is to {target}");
@@ -92,7 +92,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
         yield break;
     }
 
-    // חשיפת יחידות בקרב
+    // Reveal units in combat
     unit.Reveal();
     enemyUnit.Reveal();
 
@@ -210,7 +210,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
             {
                 var enemy = BoardManager.Instance.GetUnitAt(move) as RPSUnit;
                 
-                // אם אין יחידה במיקום היעד - עדיפות 5 (תנועה לכיוון דמות לא חשופה)
+                // If there is no unit at the target position - priority 5 (movement towards unrevealed unit)
                 if (enemy == null)
                 {
                     var nearestUnrevealed = enemyUnits
@@ -231,15 +231,15 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
                     continue;
                 }
 
-                // אם זו יחידה של ה-AI עצמו - דלג
+                // If this is the AI's own unit - skip
                 if (enemy.playerId == unit.playerId)
                     continue;
 
-                // וידוא שהיחידה שאנחנו רוצים לתקוף נמצאת בדיוק במיקום היעד
+                // Ensure the unit we want to attack is exactly at the target position
                 if (enemy.Position != move)
                     continue;
 
-                // עדיפות 1: X שצמוד ל-Y חשופה והוא מנצח אותה
+                // Priority 1: X adjacent to revealed Y and wins against it
                 if (enemy.IsRevealed && unit.Beats(enemy))
                 {
                     priorityMoves.Add((1, unit, move));
@@ -247,7 +247,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
                     continue;
                 }
 
-                // עדיפות 2: X שצמוד ל-Y חשופה והוא עושה איתה דו קרב
+                // Priority 2: X adjacent to revealed Y and ties with it
                 if (enemy.IsRevealed && unit.Kind == enemy.Kind)
                 {
                     priorityMoves.Add((2, unit, move));
@@ -255,7 +255,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
                     continue;
                 }
 
-                // עדיפות 3: X שצמוד ל-Y לא חשופה
+                // Priority 3: X adjacent to unrevealed Y
                 if (!enemy.IsRevealed)
                 {
                     priorityMoves.Add((3, unit, move));
@@ -263,10 +263,10 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
                     continue;
                 }
 
-                // עדיפות 4: X שצמוד ל-Y חשופה והוא מפסיד לה - בורח
+                // Priority 4: X adjacent to revealed Y and loses to it - flee
                 if (enemy.IsRevealed && enemy.Beats(unit))
                 {
-                    // מציאת מסלול בריחה (צעד אחד לכיוון אחר)
+                    // Find escape route (one step in another direction)
                     var escapeMoves = validMoves
                         .Where(m => m != move && BoardManager.Instance.GetUnitAt(m) == null)
                         .ToList();
@@ -282,22 +282,22 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
             }
         }
 
-        // אם אין מהלכים - סיים תור
+        // If there are no moves - end turn
         if (priorityMoves.Count == 0)
         {
             UnityEngine.Debug.Log("🤖 No valid moves found.");
             return null;
         }
 
-        // מציאת העדיפות הגבוהה ביותר
+        // Find the highest priority
         int highestPriority = priorityMoves.Min(m => m.priority);
         var bestMoves = priorityMoves.Where(m => m.priority == highestPriority).ToList();
 
-        // בחירת יחידה לפי הלוגיקה החדשה
+        // Choose unit according to new logic
         RPSUnit selectedUnit = null;
         Vector2Int selectedMove = Vector2Int.zero;
 
-        // בדיקה אם היחידה האחרונה נמצאת בעדיפות הגבוהה
+        // Check if the last unit is in the highest priority
         var lastPlayedMove = bestMoves.FirstOrDefault(m => m.unit == lastPlayedUnit);
         if (lastPlayedMove.unit != null)
         {
@@ -307,14 +307,14 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
         }
         else
         {
-            // בחירה רנדומלית מהעדיפות הגבוהה
+            // Random choice from highest priority
             var randomMove = bestMoves[UnityEngine.Random.Range(0, bestMoves.Count)];
             selectedUnit = randomMove.unit;
             selectedMove = randomMove.move;
             UnityEngine.Debug.Log($"🤖 Selected random unit: {selectedUnit.name} with priority {highestPriority}");
         }
 
-        // עדכון היחידה האחרונה ששיחקה
+        // Update the last unit that played
         lastPlayedUnit = selectedUnit;
 
         return (selectedUnit, selectedMove);
@@ -322,7 +322,7 @@ private IEnumerator ExecuteMoveSequence(RPSUnit unit, Vector2Int target)
 
     private bool IsGoodEmptyMove(RPSUnit unit, Vector2Int move, List<RPSUnit> enemies)
     {
-        // בדיקה אם המהלך מקרב אותנו לאויב
+        // Check if the move brings us closer to the enemy
         var nearestEnemy = enemies
             .OrderBy(e => Vector2Int.Distance(e.Position, unit.Position))
             .FirstOrDefault();

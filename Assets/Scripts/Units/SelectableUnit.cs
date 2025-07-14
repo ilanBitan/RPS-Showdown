@@ -10,7 +10,7 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler
         if (PlayerController.gameEnded)
             return;
 
-        // אם יש setupClick – זה override ללחיצה רגילה
+        // If there is setupClick – this is an override for regular click
         if (onSetupClick != null)
         {
             onSetupClick.Invoke();

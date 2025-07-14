@@ -47,7 +47,7 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator AssignSceneObjects()
     {
-        yield return null; // חכה 1 פריים כדי לוודא שהכל נטען
+        yield return null; // Wait 1 frame to make sure everything is loaded
 
         AssignBattleManagerFields();
         AssignTimerManagerFields();

@@ -133,21 +133,21 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
             return;
         }
 
-        // בדיקה אם זו רמה קשה
+        // Check if this is hard mode
         bool isHardLevel = FindObjectOfType<AIPlayerHardController>() != null;
 
         if (isHardLevel)
         {
             UnityEngine.Debug.Log("Hard level detected - AI will make smart choice based on player statistics");
 
-            // קבלת סטטיסטיקות מהשרת
+            // Get statistics from server
             FirebaseManager.Instance?.DatabaseService?.GetUserStats((userData) =>
             {
                 if (userData != null)
                 {
                     UnityEngine.Debug.Log($"Player statistics - Rock: {userData.rockChoices}, Paper: {userData.paperChoices}, Scissors: {userData.scissorsChoices}");
 
-                    // מציאת הכלי הנפוץ ביותר של השחקן
+                    // Find the player's most common piece
                     RPSUnit.RPSKind mostCommonChoice = RPSUnit.RPSKind.Rock;
                     int maxCount = userData.rockChoices;
 
@@ -164,7 +164,7 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
 
                     UnityEngine.Debug.Log($"Player's most common choice: {mostCommonChoice}");
 
-                    // בחירת הכלי המנצח
+                    // Choose the winning piece
                     switch (mostCommonChoice)
                     {
                         case RPSUnit.RPSKind.Rock:
@@ -182,12 +182,12 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
                 }
                 else
                 {
-                    // אם אין נתונים, נבחר באופן רנדומלי
+                    // If there is no data, choose randomly
                     aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
                     UnityEngine.Debug.Log("No player statistics available - AI chose randomly: " + aiChoice);
                 }
 
-                // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+                // Update statistics every time the player chooses a piece
                 FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
 
                 ResolveBattle();
@@ -195,11 +195,11 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         }
         else
         {
-            // רמה רגילה - בחירה רנדומלית
+            // Normal mode - random choice
             aiChoice = (RPSUnit.RPSKind)UnityEngine.Random.Range(0, 3);
             UnityEngine.Debug.Log($"Battle initiated! Player chose {playerChoice}, AI chose {aiChoice} (random)");
 
-            // נעדכן את הסטטיסטיקות בכל פעם שהשחקן בוחר כלי
+            // Update statistics every time the player chooses a piece
             FirebaseManager.Instance?.DatabaseService?.UpdateRPSChoice(choice);
 
             ResolveBattle();
@@ -213,7 +213,7 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         bool playerWins = Beats(playerChoice, aiChoice);
         bool aiWins = Beats(aiChoice, playerChoice);
 
-        // חשיפת שתי היחידות תמיד
+        // Always reveal both units
         playerUnit.Kind = playerChoice;
         aiUnit.Kind = aiChoice;
 
@@ -226,7 +226,7 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         // For PvP mode, use simple logic without animation
         if (GameModeManager.Instance.SelectedMode == GameMode.PvP && PvPMoveLogger.Instance != null)
         {
-            // בדיקת ניצחון אם FLAG נחשף
+            // Check for win if FLAG is revealed
             if (playerUnit.role == RPSUnit.UnitRole.Flag)
             {
                 //FindObjectOfType<GameEndHandler>().ShowVictory("Player 2");
@@ -294,7 +294,7 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         {
             UnityEngine.Debug.Log("✅ Player wins the battle!");
             
-            // עדכון ה-AI הקשה על דמות שהושמדה
+            // Update hard AI about destroyed unit
             var hardAI = FindObjectOfType<AIPlayerHardController>();
             if (hardAI != null)
             {
@@ -309,7 +309,7 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         {
             UnityEngine.Debug.Log("❌ AI wins the battle!");
             
-            // עדכון ה-AI הקשה על דמות שהושמדה
+            // Update hard AI about destroyed unit
             var hardAI = FindObjectOfType<AIPlayerHardController>();
             if (hardAI != null)
             {

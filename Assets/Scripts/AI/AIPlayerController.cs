@@ -34,7 +34,7 @@ public class AIPlayerController : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         UnityEngine.Debug.Log("🤖 AI is thinking...");
 
-        // מוצא את כל היחידות שיכולות לזוז
+        // Find all units that can move
         List<RPSUnit> movableUnits = FindObjectsOfType<RPSUnit>()
             .Where(u => u.playerId == 2 && u.IsMovable())
             .OrderBy(_ => UnityEngine.Random.value)
@@ -47,10 +47,10 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // מנסה כל יחידה בסדר רנדומלי עד שמוצא אחת שיכולה לזוז
+        // Try each unit in random order until finding one that can move
         foreach (var unit in movableUnits)
         {
-            // מוצא את כל המהלכים האפשריים (רק צעד אחד)
+            // Find all possible moves (only one step)
             Vector2Int[] directions = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
             var validMoves = new List<Vector2Int>();
 
@@ -58,16 +58,16 @@ public class AIPlayerController : MonoBehaviour
             {
                 Vector2Int newPos = unit.Position + dir;
 
-                // בדיקה שהמיקום בתוך הלוח
+                // Check that the position is within the board
                 if (!BoardManager.Instance.IsInsideBoard(newPos))
                     continue;
 
                 var targetUnit = BoardManager.Instance.GetUnitAt(newPos) as RPSUnit;
 
-                // אם המשבצת ריקה או שיש בה יחידת אויב (לא AI)
+                // If the cell is empty or contains an enemy unit (not AI)
                 if (targetUnit == null || targetUnit.playerId != unit.playerId)
                 {
-                    // אם יש יחידת אויב, בודקים שהיא בדיוק במיקום הזה
+                    // If there's an enemy unit, verify it's exactly at this position
                     if (targetUnit != null && targetUnit.Position != newPos)
                         continue;
 
@@ -75,7 +75,7 @@ public class AIPlayerController : MonoBehaviour
                 }
             }
 
-            // מערבב את המהלכים האפשריים
+            // Shuffle the possible moves
             validMoves = validMoves.OrderBy(_ => UnityEngine.Random.value).ToList();
 
             if (validMoves.Count > 0)
@@ -94,7 +94,7 @@ public class AIPlayerController : MonoBehaviour
     {
         var targetUnit = BoardManager.Instance.GetUnitAt(targetPos) as RPSUnit;
 
-        // בדיקה שהמהלך חוקי - רק צעד אחד
+        // Check that the move is legal - only one step
         Vector2Int delta = targetPos - unit.Position;
         if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
         {
@@ -111,23 +111,23 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // וידוא שאנחנו תוקפים רק יחידה שנמצאת בדיוק במיקום היעד
+        // Ensure we're attacking only a unit that's exactly at the target position
         if (targetUnit.Position != targetPos)
         {
             UnityEngine.Debug.Log($"🚫 Cannot attack: Target unit is at {targetUnit.Position} but move is to {targetPos}");
             yield break;
         }
 
-        // חשיפת יחידות בקרב
+        // Reveal units in combat
         unit.Reveal();
         targetUnit.Reveal();
 
-        // טיפול במקרה של מלכודת
+        // Handle trap case
         if (targetUnit.role == RPSUnit.UnitRole.Trap)
         {
             UnityEngine.Debug.Log("💥 AI stepped on trap and is destroyed.");
             
-            // עדכון ה-AI הקשה על דמות שהושמדה
+            // Update hard AI about destroyed unit
             // var hardAI = FindObjectOfType<AIPlayerHardController>();
             // if (hardAI != null)
             // {
@@ -140,12 +140,12 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // טיפול במקרה של דגל
+        // Handle flag case
         if (targetUnit.role == RPSUnit.UnitRole.Flag)
         {
             UnityEngine.Debug.Log("🎯 AI captured the FLAG! YOU LOSE!");
             
-            // // עדכון ה-AI הקשה על דגל שהושמד
+            // // Update hard AI about destroyed flag
             // var hardAI = FindObjectOfType<AIPlayerHardController>();
             // if (hardAI != null)
             // {
@@ -167,23 +167,23 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // טיפול בקרב
+        // Handle combat
         if (unit.Kind == targetUnit.Kind)
         {
             UnityEngine.Debug.Log("🤝 Same kind – triggering battle panel.");
             BattleManager.Instance?.StartBattle(unit, targetUnit, targetPos);
             yield break;
         }
-         // ✨ הוספת אנימציית קרב לכל המקרים
+         // ✨ Add battle animation for all cases
         if (FightAnimationManager.Instance != null)
         {
-            // עדכון תצוגת הנשקים
+            // Update weapon display
             FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(targetUnit.Kind, unit.Kind);
             
-            // הפעלת אנימציית הקרב
+            // Activate battle animation
            // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
             
-            // עדכון הספרייטים לפני התוצאה
+            // Update sprites before result
             FightAnimationManager.Instance.UpdateFightDisplaySprites(targetUnit.Kind, unit.Kind);
         }
         
@@ -192,14 +192,14 @@ public class AIPlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log($"🏆 AI wins! {unit.Kind} beats {targetUnit.Kind}");
             
-            // עדכון ה-AI הקשה על דמות שהושמדה
+            // Update hard AI about destroyed unit
             var hardAI = FindObjectOfType<AIPlayerHardController>();
             if (hardAI != null)
             {
                 hardAI.OnUnitDestroyed(targetUnit);
             }
 
-                        // הצגת תוצאת הקרב
+                        // Show battle result
             if (FightAnimationManager.Instance != null)
             {
                 yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(false, true));
@@ -217,7 +217,7 @@ public class AIPlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log($"💀 AI loses. {targetUnit.Kind} beats {unit.Kind}");
             
-            // עדכון ה-AI הקשה על דמות שהושמדה
+            // Update hard AI about destroyed unit
             var hardAI = FindObjectOfType<AIPlayerHardController>();
             if (hardAI != null)
             {
@@ -234,7 +234,7 @@ public class AIPlayerController : MonoBehaviour
             yield break;
         }
 
-        // במקרה שמשהו השתבש, נסיים את התור
+        // If something went wrong, end the turn
         UnityEngine.Debug.Log("🔄 Unexpected case - ending turn");
         TurnManager.Instance?.EndTurn();
         yield break;
@@ -252,18 +252,18 @@ public class AIPlayerController : MonoBehaviour
                 return Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1;
             })
             .Where(pos => {
-                // בדיקה שלא תוקפים את עצמנו
+                // Check that we are not attacking ourselves
                 var targetUnit = BoardManager.Instance.GetUnitAt(pos) as RPSUnit;
                 if (targetUnit != null && targetUnit.playerId == unit.playerId)
                 {
-                    return false; // לא תוקפים את עצמנו
+                    return false; // Do not attack ourselves
                 }
                 return true;
             })
             .ToList();
     }
 
-    // ✅ פונקציות עזר ל-AI Medium
+    // ✅ Helper functions for AI Medium
     protected List<RPSUnit> GetAllAIUnitsThatCanMove()
     {
         return FindObjectsOfType<RPSUnit>()
@@ -273,7 +273,7 @@ public class AIPlayerController : MonoBehaviour
 
     protected virtual void ExecuteMove(RPSUnit unit, Vector2Int target)
     {
-        // בדיקה שהתנועה היא חוקית (צעד אחד)
+        // Check that the movement is legal (one step)
         Vector2Int delta = target - unit.Position;
         if (!(Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1))
         {
@@ -325,7 +325,7 @@ public class AIPlayerController : MonoBehaviour
                 BattleManager.Instance?.StartBattle(unit, enemy, target);
                 return;
             }
-            // ✨ הוספת אנימציית קרב
+            // ✨ Add battle animation
              StartCoroutine(ExecuteCombatWithAnimation(unit, enemy, target));
         }
         else
@@ -368,7 +368,7 @@ public class AIPlayerController : MonoBehaviour
         yield return StartCoroutine(FightAnimationManager.Instance.ShowTrapResult(isPlayerUnit));
     }
 
-    // עדכון ה-AI הקשה על דמות שהושמדה
+    // Update hard AI about destroyed unit
     var hardAI = FindObjectOfType<AIPlayerHardController>();
     if (hardAI != null)
     {
@@ -409,7 +409,7 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
         yield return StartCoroutine(FightAnimationManager.Instance.ShowFlagCaptureResult(isPlayerUnit));
     }
 
-    // עדכון ה-AI הקשה על דגל שהושמד
+    // Update hard AI about destroyed flag
     var hardAI = FindObjectOfType<AIPlayerHardController>();
     if (hardAI != null)
     {
@@ -436,7 +436,7 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
     {
          if (FightAnimationManager.Instance != null)
         {
-            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
+            // Update weapon display - always from the player's perspective
             bool isPlayerAttacking = attacker.playerId == 1;
             if (isPlayerAttacking)
             {
@@ -447,10 +447,10 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
                 FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
             }
             
-            // הפעלת אנימציית הקרב
+            // Activate battle animation
            // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
             
-            // עדכון הספרייטים
+            // Update sprites
             if (isPlayerAttacking)
             {
                 FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
@@ -465,7 +465,7 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
         {
             Debug.Log($"🏆 {attacker.name} wins the battle at {target}: {attacker.Kind} beats {defender.Kind}");
             
-            // הצגת תוצאת הקרב
+            // Show battle result
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = attacker.playerId == 1;
@@ -481,7 +481,7 @@ private IEnumerator HandleFlagCapture(RPSUnit attacker, RPSUnit flag, Vector2Int
         {
             Debug.Log($"💀 {attacker.name} loses the battle at {target}: {defender.Kind} beats {attacker.Kind}");
             
-            // הצגת תוצאת הקרב
+            // Show battle result
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = defender.playerId == 1;

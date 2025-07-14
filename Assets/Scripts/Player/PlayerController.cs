@@ -15,12 +15,12 @@ public class PlayerController : MonoBehaviour
     public int rows = 6;
     public int myPlayerId = 1;
 
-    public static bool gameEnded = false; // 🛡️ משתנה שמנהל סיום משחק
+    public static bool gameEnded = false; // 🛡️ Variable that manages game ending
 
-    // ✅ מאפיין לקריאה חיצונית
+    // ✅ Property for external access
     public RPSUnit SelectedUnit => selectedUnit;
 
-    // ✅ מתודת עזר להזזת היחידה הנבחרת
+    // ✅ Helper method to move the selected unit
     public void TryMoveSelectedUnit(Vector2Int direction)
     {
         if (selectedUnit != null)
@@ -244,7 +244,7 @@ public class PlayerController : MonoBehaviour
                 {
                     UnityEngine.Debug.Log("🎯 You captured the enemy FLAG! YOU WIN!");
                     other.Reveal();
-                    // עדכון ה-AI הקשה על דגל שהושמד
+                    // Update hard AI about destroyed flag
                     var hardAI = FindObjectOfType<AIPlayerHardController>();
                     if (hardAI != null)
                     {
@@ -277,7 +277,7 @@ public class PlayerController : MonoBehaviour
 
                     unit.Reveal();
 
-                    // עדכון ה-AI הקשה על דמות שהושמדה
+                    // Update hard AI about destroyed unit
                     var hardAI = FindObjectOfType<AIPlayerHardController>();
                     if (hardAI != null)
                     {
@@ -345,7 +345,7 @@ public class PlayerController : MonoBehaviour
     {
         if (FightAnimationManager.Instance != null)
         {
-            // עדכון תצוגת הנשקים - תמיד מהזווית של השחקן
+            // Update weapon display - always from the player's perspective
             bool isPlayerAttacking = attacker.playerId == 1;
             if (isPlayerAttacking)
             {
@@ -356,10 +356,10 @@ public class PlayerController : MonoBehaviour
                 FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
             }
 
-            // הפעלת אנימציית הקרב
+            // Activate battle animation
             // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
 
-            // עדכון הספרייטים
+            // Update sprites
             if (isPlayerAttacking)
             {
                 FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
@@ -374,7 +374,7 @@ public class PlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log($"✅ {attacker.name} wins – replacing {defender.name}");
 
-            // הצגת תוצאת הקרב
+            // Show battle result
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = attacker.playerId == 1;
@@ -394,7 +394,7 @@ public class PlayerController : MonoBehaviour
         {
             UnityEngine.Debug.Log($"💀 {attacker.name} loses to {defender.name} and is destroyed");
 
-            // הצגת תוצאת הקרב
+            // Show battle result
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = defender.playerId == 1;

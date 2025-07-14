@@ -24,7 +24,7 @@ public class BoardManager : MonoBehaviour
             Instance = this;
 
         tiles = new RectTransform[rows, columns];
-        unitGrid = new Unit[columns, rows]; // לוגי: [x, y] → [col, row]
+        unitGrid = new Unit[columns, rows]; // Note: [x, y] → [col, row]
 
         // Force the board to stretch
         RectTransform boardRect = boardParent.GetComponent<RectTransform>();
