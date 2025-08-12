@@ -192,6 +192,10 @@ public class PlayerController : MonoBehaviour
         selectedUnit = null;
     }
 
+    /// <summary>
+    /// For the movement to be smooth, we add a small jump animation
+    /// before moving the unit.
+    /// </summary>
     System.Collections.IEnumerator HandleJumpAndMove(RPSUnit unit, Vector2Int dir)
     {
         // Trigger jump animation
@@ -356,10 +360,7 @@ public class PlayerController : MonoBehaviour
                 FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
             }
 
-            // Activate battle animation
-            // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
-
-            // Update sprites
+            // update fight display sprites
             if (isPlayerAttacking)
             {
                 FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
@@ -426,7 +427,7 @@ public class PlayerController : MonoBehaviour
         Animator anim = unit.GetComponent<Animator>();
         if (anim != null)
         {
-            anim.SetInteger("playerId", unit.playerId); // ✅ Correctly get player ID
+            anim.SetInteger("playerId", unit.playerId);
             anim.ResetTrigger("jump");
             anim.SetTrigger("jump");
         }

@@ -61,8 +61,12 @@ public class BattleManager : MonoBehaviour
         ShowPlayerPanel();
     }
 
+    /// <summary>
+    /// Prepares and shows the battle interface for the player to choose their move.
+    /// It handles differences between PvP and single-player modes,
+    /// and starts the battle intro animation.
+    /// </summary>
     public void ShowPlayerPanel()
-
     {
             if (playerUnit == null || aiUnit == null)
     {
@@ -88,14 +92,13 @@ public class BattleManager : MonoBehaviour
         }
 
         // For single player mode, use animation
-        // Update weapon display before animation starts
         if (playerUnit.playerId != 1)
         {
             var temp = playerUnit;
             playerUnit = aiUnit;
             aiUnit = temp;
         }
-
+        // Update weapon display before animation starts
         FightAnimationManager.Instance?.UpdatePreChoiceWeaponDisplay(playerUnit.Kind, aiUnit.Kind);
 
         StartCoroutine(AnimateFightPanelThenShowBattle());
@@ -105,13 +108,21 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
     this.playerUnit = player;
     this.aiUnit = ai;
 }
+    /// <summary>
+    /// Handles the sequence of animations when a battle starts:
+    /// 1. Plays an intro animation through FightAnimationManager
+    /// 2. Shows the battle panel with RPS choice buttons
+    /// 3. Sets up button listeners for player choices
+    /// </summary>
     private IEnumerator AnimateFightPanelThenShowBattle()
     {
-        // Play the fight intro animation
+        // Play the fight intro animation (shows the VS screen for 1.2 seconds)
         yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
 
+        // After intro animation, show the battle panel with RPS buttons
         battlePanel?.SetActive(true);
 
+        // Set up fresh click listeners for each RPS choice
         rockButton.onClick.RemoveAllListeners();
         rockButton.onClick.AddListener(() => OnPlayerChoice(RPSUnit.RPSKind.Rock));
 
@@ -206,8 +217,18 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         }
     }
 
+    /// <summary>
+    /// Resolves the battle outcome and manages the animation sequence:
+    /// 1. Hides the battle panel
+    /// 2. Determines winner
+    /// 3. Reveals both units' choices
+    /// 4. Updates unit visuals
+    /// 5. Triggers appropriate fight animations based on game mode
+    /// 6. Handles special cases for Flag units
+    /// </summary>
     private void ResolveBattle()
     {
+        // Hide the RPS choice panel
         battlePanel?.SetActive(false);
 
         bool playerWins = Beats(playerChoice, aiChoice);
@@ -263,10 +284,13 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
             return;
         }
 
-        // For single player mode, use animation
-        // Update the fight display sprites through animation manager
+        // For single player mode, update the battle animation display:
+        // 1. Updates the weapon sprites for both units to show their choices
+        // 2. These sprites will be visible during the fight animation sequence
         FightAnimationManager.Instance?.UpdateFightDisplaySprites(playerChoice, aiChoice);
 
+        // Special case: If either unit is a Flag, skip the battle animation
+        // Flag reveals trigger game end conditions handled elsewhere
         if (playerUnit.role == RPSUnit.UnitRole.Flag || aiUnit.role == RPSUnit.UnitRole.Flag)
             return;
 
@@ -285,9 +309,15 @@ public void SetUnits(RPSUnit player, RPSUnit ai)
         }
     }
 
+    /// <summary>
+    /// Plays battle result animation, removes losing unit, moves winner to target position,
+    /// updates AI knowledge, and cleans up battle state.
+    /// </summary>
+    /// <param name="playerWon">True if player won the battle</param>
+    /// <param name="aiWon">True if AI won the battle</param>
     private IEnumerator ShowFightResultAndFinish(bool playerWon, bool aiWon)
     {
-        // Play the fight result animation
+        // Play the fight result animation showing victory/defeat animations for both units
         yield return StartCoroutine(FightAnimationManager.Instance.ShowFightResult(playerWon, aiWon));
 
         if (playerWon)

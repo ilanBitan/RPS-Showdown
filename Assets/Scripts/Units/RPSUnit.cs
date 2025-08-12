@@ -468,13 +468,15 @@ public class RPSUnit : Unit
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
 
-            BattleManager.Instance?.StartBattle(this, enemy, targetPos);
-            return true;
-        }
+                // Start battle animation (see BattleManager.Instance.StartBattle for animation details)
+                BattleManager.Instance?.StartBattle(this, enemy, targetPos);
+                return true;
+            }
 
-        StartCoroutine(ExecuteCombatWithAnimation(this, enemy, targetPos, originalPosition));
-        return false;
-    }
+            // Start combat animation sequence (see ExecuteCombatWithAnimation for animation details)
+            StartCoroutine(ExecuteCombatWithAnimation(this, enemy, targetPos, originalPosition));
+            return false;
+        }
 
     // Empty space movement
     MoveTo(targetPos);
@@ -592,13 +594,15 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
     yield return StartCoroutine(HandleFlagCapture(this, flagUnit, flagUnit.Position));
 }
 
-    
+    /// <summary>
+    /// Executes combat animation between two RPS units with animation.
+    /// </summary>
         public IEnumerator ExecuteCombatWithAnimation(RPSUnit attacker, RPSUnit defender, Vector2Int targetPos, Vector2Int originalPosition)
     {
         UnityEngine.Debug.Log($"🔥 im from rpsunit {attacker.name} is attacking {defender.name}");
         if (FightAnimationManager.Instance != null)
         {
-            // Update weapon display - always from the player's perspective
+            // Update weapon display before combat (for older version of code)
             bool isPlayerAttacking = attacker.playerId == 1;
             if (isPlayerAttacking)
             {
@@ -609,10 +613,8 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
                 FightAnimationManager.Instance.UpdatePreChoiceWeaponDisplay(defender.Kind, attacker.Kind);
             }
             
-            // Activate battle animation
-           // yield return StartCoroutine(FightAnimationManager.Instance.PlayFightIntroAnimation());
             
-            // Update sprites
+            // Update sprites for fight display
             if (isPlayerAttacking)
             {
                 FightAnimationManager.Instance.UpdateFightDisplaySprites(attacker.Kind, defender.Kind);
@@ -627,7 +629,7 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
         {
             UnityEngine.Debug.Log($"✅ {attacker.name} wins – replacing {defender.name}");
             
-            // Show battle result
+            // Show battle result animation
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = attacker.playerId == 1;
@@ -643,8 +645,7 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
 
-                
-            
+            // Remove defeated unit with jump animation
             BoardManager.Instance.RemoveUnit(defender);
             StartCoroutine(PlayJumpAndRemove(defender.gameObject));
             MoveTo(targetPos);
@@ -653,7 +654,7 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
         {
             UnityEngine.Debug.Log($"💀 {attacker.name} loses to {defender.name} and is destroyed");
             
-            // Show battle result
+            // Show battle result animation
             if (FightAnimationManager.Instance != null)
             {
                 bool playerWon = defender.playerId == 1;
@@ -669,6 +670,7 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
             {
                 PvPMoveLogger.Instance.LogPlayerMove(originalPosition, targetPos);
             }
+            // Remove defeated unit with jump animation
             BoardManager.Instance.RemoveUnit(attacker);
             StartCoroutine(PlayJumpAndRemove(attacker.gameObject));
         }
@@ -683,8 +685,6 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
 
     public void MoveTo(Vector2Int newPos)
     {
-
-        
         // Handle board management logic
         Vector2Int oldPos = Position;
         BoardManager.Instance.MoveUnit(this, newPos);
@@ -699,7 +699,8 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
         Transform targetTile = BoardManager.Instance.GetTileTransform(newPos);
         if (targetTile != null)
         {
-            // Start the animation coroutine
+            // Start the animation coroutine for smooth movement to the new tile
+            // (see SmoothMove for animation details)
             StartCoroutine(SmoothMove(targetTile, newPos));
         }
 
@@ -708,7 +709,8 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
 
     private IEnumerator SmoothMove(Transform targetTile, Vector2Int targetGridPos)
     {
-        // Trigger jump animation
+        // This coroutine animates the unit's movement from its current position to the target tile.
+        // 1. Triggers a jump animation using the Animator for smooth movement.
         Animator anim = GetComponent<Animator>();
         if (anim != null)
         {
@@ -717,9 +719,10 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
             anim.SetTrigger("jump");
         }
 
-        // Wait for animation to start
+        // 2. Waits briefly to let the jump animation start.
         yield return new WaitForSeconds(0.2f);
 
+        // 3. Gets the RectTransform for position manipulation.
         RectTransform rt = GetComponent<RectTransform>();
         if (rt == null) yield break;
 
@@ -727,8 +730,9 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
         Vector3 end = targetTile.position;
 
         float elapsed = 0f;
-        float duration = 0.25f; // smooth time
+        float duration = 0.25f; // Duration of the smooth movement
 
+        // 4. Interpolates the position from start to end over 'duration' seconds for smooth movement.
         while (elapsed < duration)
         {
             rt.position = Vector3.Lerp(start, end, elapsed / duration);
@@ -736,19 +740,19 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
             yield return null;
         }
 
-        // Snap to final position
+        // 5. Snaps to the final position to ensure accuracy.
         rt.position = end;
 
-        // Update hierarchy and grid data
+        // 6. Updates the parent transform and anchored position to match the tile.
         transform.SetParent(targetTile, false);
         rt.anchoredPosition = Vector2.zero;
 
-        // Make sure the board state is updated
+        // 7. Updates the board state to reflect the new unit position.
         BoardManager.Instance.PlaceUnit(this, targetGridPos);
 
         UnityEngine.Debug.Log($"✅ Unit smoothly moved to [col {targetGridPos.x}, row {targetGridPos.y}]");
 
-        // Only end turn if this is a player-controlled unit and not in battle
+        // 8. Ends the turn if the unit is player-controlled and not in battle.
         if (IsPlayerControlled && !BattleManager.Instance.IsBattleActive())
         {
             TurnManager.Instance?.EndTurn();
@@ -760,9 +764,10 @@ public IEnumerator HandleFlagCapture(RPSUnit flagUnit)
         return other != null && other.playerId != this.playerId;
     }
 
-    	
+    //so the unit won't just disappear, we play a jump animation before removing it.	
     private IEnumerator PlayJumpAndRemove(GameObject unitObject, float delay = 0.5f)
     {
+        // Play jump animation before removing the unit
         Animator anim = unitObject.GetComponent<Animator>();
         if (anim != null)
         {

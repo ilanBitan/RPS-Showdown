@@ -116,6 +116,17 @@ public class PvPMoveLogger : MonoBehaviour
     /// <summary>
     /// Handle new opponent move from server
     /// </summary>
+    /// <summary>
+    /// Handles opponent moves received from Firebase database.
+    /// Called for both initiator and non-initiator when a move is made.
+    /// - For initiator: Ignores their own moves that they already processed
+    /// - For non-initiator: Processes opponent's moves to keep boards synchronized
+    /// 
+    /// Battle Flow:
+    /// 1. Validates the move is from the opponent
+    /// 2. Parses the move coordinates
+    /// 3. Queues the move execution on the main thread
+    /// </summary>
     private void HandleOpponentMove(object sender, ValueChangedEventArgs args)
     {
         if (args.DatabaseError != null)
@@ -126,6 +137,8 @@ public class PvPMoveLogger : MonoBehaviour
 
         string moveDescription = args.Snapshot.Value?.ToString();
 
+        // Skip if this is a move we've already processed or an empty move
+        // This prevents move duplication and infinite loops
         if (string.IsNullOrEmpty(moveDescription) || moveDescription == lastProcessedMove)
             return;
 
@@ -157,8 +170,24 @@ public class PvPMoveLogger : MonoBehaviour
         });
     }
 
+   
     /// <summary>
-    /// Handle battle result from server
+    /// Processes battle results from Firebase database.
+    /// Behavior differs based on role:
+    /// 
+    /// For Initiator (attacker):
+    /// - Ignores the battle result as they process it locally
+    /// - They are responsible for sending the result to Firebase
+    /// 
+    /// For Non-Initiator (defender):
+    /// - Receives and applies the battle outcome
+    /// - Handles tie cases by updating unit visuals and restarting battle
+    /// - Updates board state based on winner/loser
+    /// 
+    /// Battle Flow:
+    /// 1. Validates battle state
+    /// 2. Processes battle result data
+    /// 3. For non-initiator: Applies result or handles tie restart
     /// </summary>
     private void HandleBattleResult(object sender, ValueChangedEventArgs args)
     {
@@ -170,6 +199,10 @@ public class PvPMoveLogger : MonoBehaviour
 
         UnityEngine.Debug.Log($"[PvPMoveLogger] Received battle result. isInBattle: {isInBattle}");
 
+        // Initiator ignores this event as they handle their own battle resolution
+        // Non-initiator uses this to receive and apply battle outcomes
+
+        // Safety check - only process results when we're actually in a battle
         if (!isInBattle)
         {
             UnityEngine.Debug.LogWarning("[PvPMoveLogger] Ignoring battle result - not in battle state");
@@ -191,7 +224,7 @@ public class PvPMoveLogger : MonoBehaviour
              if(!isBattleInitiator)
             {
 if (battleResultData.ContainsKey("tieRestart"))
-{
+{ // Handle tie restart case:
     UnityEngine.Debug.Log("[PvPMoveLogger] Tie restart received - updating units with tieChoice!");
 
     if (battleResultData.ContainsKey("tieChoice"))
@@ -211,7 +244,7 @@ if (battleResultData.ContainsKey("tieRestart"))
     {
         UnityEngine.Debug.LogError("[PvPMoveLogger] Tie restart but no tieChoice found!");
     }
-
+    //set as null to be able to receive new choices
     myBattleChoice = null;
     opponentBattleChoice = null;
 
@@ -219,9 +252,6 @@ if (battleResultData.ContainsKey("tieRestart"))
     BattleManager.Instance.ShowPlayerPanel();
     return;
 }
-
-
-
 
 
             StartCoroutine(ApplyBattleResult(battleResultData));
@@ -244,8 +274,12 @@ if (battleResultData.ContainsKey("tieRestart"))
         ParseAndExecuteMove(moveDescription);
     }
 
+  
     /// <summary>
-    /// Parse and execute opponent move on local board
+    /// Parses and executes opponent moves to keep local board synchronized.
+    /// Validates move format, unit ownership, and position data before execution.
+    /// Handles movement to empty spaces and initiates battles for occupied positions.
+    /// Note: Both players execute this to keep their boards synchronized,
     /// </summary>
     private void ParseAndExecuteMove(string moveDescription)
     {
@@ -340,18 +374,23 @@ if (battleResultData.ContainsKey("tieRestart"))
 
     /// <summary>
     /// Execute opponent move using the same logic as ExecuteMoveSequence
+    /// Called by both initiator and non-initiator, but with different roles.
     /// </summary>
     private IEnumerator ExecuteOpponentMove(RPSUnit unit, Vector2Int targetPos)
     {
         UnityEngine.Debug.Log($"[PvPMoveLogger] === EXECUTING OPPONENT MOVE ===");
 
-        // Ensure unit still exists and is valid FIRST
+        // Both initiator and non-initiator run this to keep boards in sync
+        // Initiator: Handles their own move and battle resolution
+        // Non-initiator: Mirrors the opponent's move and waits for battle results
+
+        // Safety check - unit might have been destroyed during network delay
         if (unit == null)
         {
             UnityEngine.Debug.LogWarning($"[PvPMoveLogger] Unit was destroyed during execution. Aborting.");
             yield break;
         }
-
+        // Log the move details
         UnityEngine.Debug.Log($"[PvPMoveLogger] Moving Unit: {unit.name} | Player: {unit.playerId} | Kind: {unit.Kind} | Role: {unit.role}");
         UnityEngine.Debug.Log($"[PvPMoveLogger] From Position: {unit.Position} | To Position: {targetPos}");
         UnityEngine.Debug.Log($"[PvPMoveLogger] Executing opponent move: {unit.name} (Player {unit.playerId}) from {unit.Position} to {targetPos}");
@@ -390,8 +429,7 @@ if (battleResultData.ContainsKey("tieRestart"))
             UnityEngine.Debug.Log($"[GUEST BOARD CHECK] FindObjectsOfType found NO UNIT at {targetPos}");
         }
 
-        // CRITICAL FIX: Check if the unit at target position has actually moved somewhere else
-        // This fixes the synchronization issue where a unit moved away but the grid wasn't updated
+        // Check if the unit at target position has actually moved somewhere else
         if (targetUnit != null && targetUnit.gameObject != null && targetUnit.Position != targetPos)
         {
             UnityEngine.Debug.Log($"[GUEST BOARD CHECK] SYNC FIX: Found unit {targetUnit.name} at grid position {targetPos} but unit is actually at {targetUnit.Position}");
@@ -516,6 +554,7 @@ if (battleResultData.ContainsKey("tieRestart"))
 // Simple battle - resolve using combat animation system
 
 Vector2Int originalPosition = unit.Position;
+// pause here until the combat animation sequence is fully complete
 yield return StartCoroutine(unit.ExecuteCombatWithAnimation(unit, targetUnit, targetPos, originalPosition));
 
 // Synchronize turn after guest (player 2) completed their move
@@ -660,7 +699,6 @@ yield break;
         }
 
         // Wait for opponent choice
-        // Wait for opponent choice
         float timeout = 30f;
         float elapsed = 0f;
 
@@ -802,16 +840,23 @@ yield break;
         }
     }
 
-    /// <summary>
-    /// Resolve the battle and send result to server (only for initiator)
-    /// </summary>
+
+  /// <summary>
+/// Resolves battle outcomes and updates both players' boards (initiator only).
+/// Handles normal battles (different units) with immediate resolution,
+/// and tie battles (same units) with player choices and potential restarts.
+/// Sends results to Firebase for opponent synchronization.
+/// </summary>
     private async void ResolveBattleAsInitiator()
     {
+        // Safety check - only the initiator should resolve battles
         if (!isInBattle || myBattleUnit == null || opponentBattleUnit == null || !isBattleInitiator) return;
 
         try
         {
-            // Check if this is a normal battle (different unit types) or a tie battle (same unit types)
+            // First determine the battle type:
+            // - Normal battle: Units have different types (Rock vs Scissors)
+            // - Tie battle: Units have same type (Rock vs Rock)
             bool isNormalBattle = myBattleUnit.Kind != opponentBattleUnit.Kind;
 
             if (isNormalBattle)
@@ -902,7 +947,6 @@ yield break;
                 else
                 {
                     // Tie - restart battle
-                    // Tie - restart battle
 UnityEngine.Debug.Log($"[PvPMoveLogger] Battle is a tie! Both chose {myBattleChoice}");
 
 // Update real units with new choices so intro shows correct weapons
@@ -920,7 +964,6 @@ if (myBattleChoice.HasValue && opponentBattleChoice.HasValue)
 // Clear battle choices on server
 await roomRef.Child("battleChoice").RemoveValueAsync();
 
-// 🔑 OPTIONAL: Write a tieRestart flag for the non-initiator (your logic for that looks fine)
 var tieRestartResult = new Dictionary<string, object>
 {
     { "winner", null },
@@ -1125,10 +1168,17 @@ BattleManager.Instance.ShowPlayerPanel();
         StopListening();
     }
 
+/// <summary>
+/// Processes and applies the battle outcome received from Firebase.
+/// This runs on the non-initiator side to mirror the battle result.
+/// Note: This is ONLY called by the non-initiator. The initiator uses ApplyBattleResultLocally.
+/// </summary>
+/// <param name="battleResultData">Firebase data containing winner and both players' choices</param>
 private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultData)
 {
     BattleManager.Instance.SetUnits(myBattleUnit, opponentBattleUnit);
 
+    // Validate we got all required fields from Firebase
     if (!battleResultData.ContainsKey("winner") || !battleResultData.ContainsKey("hostChoice") || !battleResultData.ContainsKey("guestChoice"))
     {
         UnityEngine.Debug.LogError("[PvPMoveLogger] Invalid battle result data");
@@ -1154,13 +1204,15 @@ private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultDat
         yield break;
     }
 
+    // Figure out if we won by matching our role (host/guest) with winner
     string myPlayerType = isHost ? "host" : "guest";
     bool iWon = winner == myPlayerType;
 
     UnityEngine.Debug.Log($"[PvPMoveLogger] Applying battle result: Winner={winner}, HostChoice={hostChoice}, GuestChoice={guestChoice}, IWon={iWon}");
     UnityEngine.Debug.Log($"[PvPMoveLogger] My player type: {myPlayerType}, Battle units: myUnit={myBattleUnit?.name}, opponentUnit={opponentBattleUnit?.name}");
 
-    // FIXED LOGIC: Now we know exactly which player made which choice
+    // Map the host/guest choices to my/opponent choices based on our role
+    // This is crucial for showing the right weapons on each side
     RPSUnit.RPSKind myActualChoice;
     RPSUnit.RPSKind opponentActualChoice;
 
@@ -1183,11 +1235,14 @@ private IEnumerator ApplyBattleResult(Dictionary<string, object> battleResultDat
     myBattleUnit.Kind = myActualChoice;
     opponentBattleUnit.Kind = opponentActualChoice;
 
+    // Make sure both units are visible and have updated sprites
+    // This is important for the fight animation to look right
     myBattleUnit.Reveal();
     opponentBattleUnit.Reveal();
     myBattleUnit.UpdateVisual();
     opponentBattleUnit.UpdateVisual();
 
+    // Small delay to let the visuals update before the fight
     yield return new WaitForSeconds(0.5f);
 
     // Apply the battle outcome - the winner keeps their unit and moves to target

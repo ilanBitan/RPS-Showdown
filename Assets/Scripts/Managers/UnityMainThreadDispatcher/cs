@@ -3,9 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Handles the execution of actions on Unity's main thread from background threads.
+
+/// </summary>
 public class UnityMainThreadDispatcher : MonoBehaviour
 {
     private static UnityMainThreadDispatcher _instance;
+    // Queue to store actions that need to be executed on the main thread
     private static readonly Queue<Action> _actionQueue = new Queue<Action>();
     private static bool _initialized;
 
@@ -21,20 +26,33 @@ public class UnityMainThreadDispatcher : MonoBehaviour
         return _instance;
     }
 
+    /// <summary>
+    /// Adds an action to the queue to be executed on the main thread.
+    /// </summary>
+    /// <param name="action">The action that needs to be executed on the main thread</param>
     public void Enqueue(Action action)
     {
+        // Use lock to ensure thread-safe access to the queue
         lock (_actionQueue)
         {
             _actionQueue.Enqueue(action);
         }
     }
 
+    /// <summary>
+    /// Unity's Update method runs on the main thread.
+    /// Processes all queued actions on each frame.
+    /// This ensures that Unity operations are executed safely on the main thread.
+    /// </summary>
     private void Update()
     {
+        // Lock the queue while processing to prevent concurrent modifications
         lock (_actionQueue)
         {
+            // Process all queued actions
             while (_actionQueue.Count > 0)
             {
+                // Dequeue and execute each action
                 _actionQueue.Dequeue()?.Invoke();
             }
         }
