@@ -6,6 +6,10 @@ RPS-Showdown is a turn-based tactical strategy game built in Unity that combines
 
 The game supports both single-player and online play. In PvE, players can face AI opponents across three difficulty levels. In PvP, two players join the same room through Firebase, place their units during setup, and keep their boards synchronized through real-time move logging and battle state updates.
 
+## Game Teaser
+[![RPS Showdown Teaser](https://img.youtube.com/vi/NSYpIRhCA6g/maxresdefault.jpg)](https://www.youtube.com/watch?v=NSYpIRhCA6g)
+*Click the image above to watch the gameplay teaser on YouTube.*
+
 ## Features
 
 - 6x7 tactical board with tile-based movement and unit placement
